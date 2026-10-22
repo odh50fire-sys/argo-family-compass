@@ -22,7 +22,7 @@
   <!-- Pretendard Font -->
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 
-  <!-- 50개 심층 질문 & 6대 영역 데이터베이스 로드 -->
+  <!-- 50개 4지선다형 질문 & 6대 영역 데이터베이스 로드 -->
   <script src="questions-data.js"></script>
 
   <style>
@@ -56,7 +56,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useMemo } = React;
+    const { useState, useEffect, useMemo } = React;
 
     const FAMILY_MEMBERS = [
       { id: 'father', name: '아빠', age: 45, role: '휴직 중 (삶의 2막)', avatar: '🐻', badge: '쉼과 새로운 도약' },
@@ -66,8 +66,38 @@
     ];
 
     function MobileApp() {
-      const [currentTab, setCurrentTab] = useState('home');
+      const [currentTab, setCurrentTab] = useState('home'); // 'home', 'solo', 'family', 'charter'
       const [courseCount, setCourseCount] = useState(50);
+
+      // 로컬 스토리지 이력
+      const [savedHistory, setSavedHistory] = useState([]);
+      const [viewingRecord, setViewingRecord] = useState(null);
+
+      useEffect(() => {
+        try {
+          const raw = localStorage.getItem('argo_family_history');
+          if (raw) setSavedHistory(JSON.parse(raw));
+        } catch (e) {
+          console.error(e);
+        }
+      }, []);
+
+      const saveRecord = (recordData) => {
+        try {
+          const updated = [recordData, ...savedHistory.slice(0, 29)];
+          setSavedHistory(updated);
+          localStorage.setItem('argo_family_history', JSON.stringify(updated));
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      const deleteRecord = (id, e) => {
+        e.stopPropagation();
+        const updated = savedHistory.filter(h => h.id !== id);
+        setSavedHistory(updated);
+        localStorage.setItem('argo_family_history', JSON.stringify(updated));
+      };
 
       const activeQuestions = useMemo(() => {
         if (courseCount === 10) {
@@ -93,7 +123,7 @@
       const [soloMember, setSoloMember] = useState(FAMILY_MEMBERS[0]);
       const [soloStep, setSoloStep] = useState(0);
       const [soloScores, setSoloScores] = useState({});
-      const [soloHistory, setSoloHistory] = useState([]); // [{ step, valueKey }]
+      const [soloHistory, setSoloHistory] = useState([]);
       const [soloFinished, setSoloFinished] = useState(false);
       const [activeRecoTab, setActiveRecoTab] = useState('career');
 
@@ -101,7 +131,7 @@
       const [familyRound, setFamilyRound] = useState(0);
       const [familyTurn, setFamilyTurn] = useState(0);
       const [familyScores, setFamilyScores] = useState({ father: {}, mother: {}, son: {}, daughter: {} });
-      const [familyHistory, setFamilyHistory] = useState([]); // [{ round, turn, memberId, valueKey }]
+      const [familyHistory, setFamilyHistory] = useState([]);
       const [familyFinished, setFamilyFinished] = useState(false);
       const [showPassModal, setShowPassModal] = useState(false);
 
@@ -114,9 +144,8 @@
         "어릴 때 시간 가는 줄 모르고 놀았던 놀이는 무엇이었나요?"
       ];
 
-      // 최다 득표 가치
       const getTopValue = (scores) => {
-        const entries = Object.entries(scores);
+        const entries = Object.entries(scores || {});
         if (entries.length === 0) return 'autonomy';
         entries.sort((a, b) => b[1] - a[1]);
         return entries[0][0];
@@ -131,6 +160,19 @@
         if (soloStep + 1 < activeQuestions.length) {
           setSoloStep(soloStep + 1);
         } else {
+          // 저장
+          const topKey = getTopValue(nextScores);
+          const newRecord = {
+            id: 'solo_' + Date.now(),
+            type: 'solo',
+            date: new Date().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            member: soloMember,
+            courseCount,
+            topKey,
+            scores: nextScores
+          };
+          saveRecord(newRecord);
+
           setSoloFinished(true);
           if (window.confetti) window.confetti({ particleCount: 80, spread: 70 });
         }
@@ -158,9 +200,9 @@
         const currentM = FAMILY_MEMBERS[familyTurn];
         const mScore = familyScores[currentM.id] || {};
         const updatedScore = { ...mScore, [valueKey]: (mScore[valueKey] || 0) + 1 };
-        setFamilyScores({ ...familyScores, [currentM.id]: updatedScore });
+        const nextScores = { ...familyScores, [currentM.id]: updatedScore };
+        setFamilyScores(nextScores);
 
-        // 히스토리 추가
         setFamilyHistory([...familyHistory, {
           round: familyRound,
           turn: familyTurn,
@@ -177,13 +219,28 @@
             setFamilyTurn(0);
             setShowPassModal(true);
           } else {
+            // 패밀리 완료 저장
+            const familySummary = {};
+            FAMILY_MEMBERS.forEach(m => {
+              familySummary[m.id] = getTopValue(nextScores[m.id]);
+            });
+            const newRecord = {
+              id: 'family_' + Date.now(),
+              type: 'family',
+              date: new Date().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+              courseCount,
+              familyScores: nextScores,
+              familySummary
+            };
+            saveRecord(newRecord);
+
             setFamilyFinished(true);
             if (window.confetti) window.confetti({ particleCount: 100, spread: 80 });
           }
         }
       };
 
-      // 패밀리 릴레이 이전 턴 되돌리기
+      // 패밀리 이전 턴 되돌리기
       const handleFamilyPrev = () => {
         if (familyHistory.length === 0) return;
         const lastEntry = familyHistory[familyHistory.length - 1];
@@ -201,19 +258,36 @@
         setFamilyTurn(turn);
       };
 
+      // 이력 열람
+      const openHistoryRecord = (rec) => {
+        setViewingRecord(rec);
+        if (rec.type === 'solo') {
+          setSoloMember(rec.member);
+          setSoloScores(rec.scores);
+          setSoloFinished(true);
+          setCurrentTab('solo');
+        } else {
+          setFamilyScores(rec.familyScores);
+          setFamilyFinished(true);
+          setCurrentTab('family');
+        }
+      };
+
+      const optionLabels = ['A', 'B', 'C', 'D'];
+
       return (
         <div className="mobile-screen">
           {/* 상단 모바일 앱 헤더 */}
-          <header className="px-5 py-4 bg-white/95 backdrop-blur-md sticky top-0 z-30 border-b border-gray-100 flex items-center justify-between shadow-xs">
+          <header className="px-5 py-4 bg-white/95 backdrop-blur-md sticky top-0 z-30 border-b border-gray-100 flex items-center justify-between shadow-2xs">
             <div className="flex items-center gap-2" onClick={() => setCurrentTab('home')}>
               <span className="text-2xl">🧭</span>
               <div>
                 <span className="font-black text-xl text-gray-900 tracking-tight">ARGO</span>
-                <span className="ml-1 text-xs font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">50문항 나침반</span>
+                <span className="ml-1 text-[11px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">4지선다형</span>
               </div>
             </div>
             <div className="text-xs font-extrabold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
-              {courseCount}문항 코스
+              {courseCount}문항
             </div>
           </header>
 
@@ -225,19 +299,18 @@
               <div className="space-y-6">
                 <div className="bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 text-white rounded-3xl p-6 shadow-md">
                   <span className="text-xs font-black uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full">
-                    50 DEEP DILEMMAS & 6 DIMENSIONS
+                    50 SCENARIOS & 6 DIMENSIONS
                   </span>
                   <h1 className="text-2xl font-black mt-3 mb-2 leading-tight">
-                    진짜 내 마음의 가치를 찾는 <br/>50개 심층 인생 항해
+                    생생한 상황으로 찾는 <br/>우리 가족의 진짜 가치
                   </h1>
                   <p className="text-xs text-amber-50 leading-relaxed">
-                    아빠의 쉼, 엄마의 새출발, 아이들의 무한한 성장! <br/>
-                    <strong>직업·공부·취미·놀이·여행지·생활활동</strong> 6대 영역을 찾아요.
+                    4지선다형 질문과 6대 영역(각 영역별 5개 이상의 구체적 추천)을 만나보세요.
                   </p>
                 </div>
 
                 {/* 오늘의 생각 한 입 */}
-                <div className="bg-white border-2 border-amber-200 rounded-2xl p-4 shadow-xs">
+                <div className="bg-white border-2 border-amber-200 rounded-2xl p-4 shadow-2xs">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-black text-amber-600 flex items-center gap-1">
                       <span>💡</span> 오늘의 생각 한 입
@@ -254,8 +327,51 @@
                   </p>
                 </div>
 
+                {/* 저장된 진단 기록 보관소 (모바일) */}
+                {savedHistory.length > 0 && (
+                  <div className="bg-white border-2 border-indigo-200 rounded-3xl p-4 shadow-2xs">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-black text-gray-900 flex items-center gap-1.5">
+                        <span>📜</span> 저장된 진단 기록 ({savedHistory.length}개)
+                      </span>
+                      <span className="text-[10px] text-indigo-600 font-bold">터치하여 다시보기</span>
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scroll">
+                      {savedHistory.map((rec) => {
+                        const topData = SIX_DIMENSIONS_RECOMMENDATIONS[rec.topKey] || SIX_DIMENSIONS_RECOMMENDATIONS.autonomy;
+                        return (
+                          <div
+                            key={rec.id}
+                            onClick={() => openHistoryRecord(rec)}
+                            className="p-3 bg-indigo-50/50 active:bg-indigo-100/70 border border-indigo-100 rounded-xl flex items-center justify-between transition-all"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">{rec.type === 'solo' ? rec.member?.avatar : '👨‍👩‍👧‍👦'}</span>
+                              <div>
+                                <div className="font-black text-xs text-gray-900">
+                                  {rec.type === 'solo' ? `${rec.member?.name}의 나침반` : '온 가족 릴레이'}
+                                  <span className="ml-1 text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded-full font-bold">
+                                    {rec.type === 'solo' ? topData.name.split(' ')[0] : '헌장'}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-gray-400">{rec.date}</div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => deleteRecord(rec.id, e)}
+                              className="text-gray-300 text-xs px-2 py-1"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* 질문 분량 선택 */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs">
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-2xs">
                   <div className="text-xs font-black text-gray-500 mb-2">질문 코스 선택</div>
                   <div className="grid grid-cols-3 gap-2">
                     {[
@@ -282,7 +398,7 @@
                   <h2 className="text-xs font-bold text-gray-400 mb-2 px-1">우리 가족 4인 프로필</h2>
                   <div className="grid grid-cols-2 gap-2.5">
                     {FAMILY_MEMBERS.map(m => (
-                      <div key={m.id} className="bg-white border border-gray-200 rounded-2xl p-3 flex items-center gap-2.5 shadow-xs">
+                      <div key={m.id} className="bg-white border border-gray-200 rounded-2xl p-3 flex items-center gap-2.5 shadow-2xs">
                         <span className="text-2xl">{m.avatar}</span>
                         <div>
                           <div className="font-black text-sm text-gray-900">{m.name} <span className="text-xs text-gray-400 font-normal">({m.age}세)</span></div>
@@ -296,8 +412,8 @@
                 {/* 모드 실행 버튼 2개 */}
                 <div className="space-y-3 pt-1">
                   <button
-                    onClick={() => { setCurrentTab('solo'); setSoloFinished(false); setSoloStep(0); setSoloScores({}); setSoloHistory([]); }}
-                    className="w-full text-left p-4 bg-white border-2 border-amber-300 active:border-amber-500 rounded-2xl shadow-xs flex items-center justify-between"
+                    onClick={() => { setCurrentTab('solo'); setSoloFinished(false); setSoloStep(0); setSoloScores({}); setSoloHistory([]); setViewingRecord(null); }}
+                    className="w-full text-left p-4 bg-white border-2 border-amber-300 active:border-amber-500 rounded-2xl shadow-2xs flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-2xl shrink-0">
@@ -306,15 +422,15 @@
                       <div>
                         <span className="text-[11px] font-black text-amber-700">모드 1. 혼자 깊이 생각하기</span>
                         <div className="text-lg font-black text-gray-900">솔로 심층 모드 ({courseCount}문항)</div>
-                        <div className="text-[11px] text-gray-500 mt-0.5">언제든 이전 질문으로 되돌아갈 수 있어요</div>
+                        <div className="text-[11px] text-gray-500 mt-0.5">4지선다형 · 자동 저장 지원</div>
                       </div>
                     </div>
                     <span className="text-lg text-amber-500 font-bold">➜</span>
                   </button>
 
                   <button
-                    onClick={() => { setCurrentTab('family'); setFamilyFinished(false); setFamilyRound(0); setFamilyTurn(0); setFamilyScores({ father: {}, mother: {}, son: {}, daughter: {} }); setFamilyHistory([]); }}
-                    className="w-full text-left p-4 bg-white border-2 border-indigo-300 active:border-indigo-500 rounded-2xl shadow-xs flex items-center justify-between"
+                    onClick={() => { setCurrentTab('family'); setFamilyFinished(false); setFamilyRound(0); setFamilyTurn(0); setFamilyScores({ father: {}, mother: {}, son: {}, daughter: {} }); setFamilyHistory([]); setViewingRecord(null); }}
+                    className="w-full text-left p-4 bg-white border-2 border-indigo-300 active:border-indigo-500 rounded-2xl shadow-2xs flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-2xl shrink-0">
@@ -323,7 +439,7 @@
                       <div>
                         <span className="text-[11px] font-black text-indigo-700">모드 2. 폰 넘겨가며 대화하기</span>
                         <div className="text-lg font-black text-gray-900">패밀리 릴레이 모드 ({courseCount}문항)</div>
-                        <div className="text-[11px] text-gray-500 mt-0.5">실수했을 때 이전 턴으로 되돌아가기 지원</div>
+                        <div className="text-[11px] text-gray-500 mt-0.5">둘러앉아 함께 채우는 가족 나침반</div>
                       </div>
                     </div>
                     <span className="text-lg text-indigo-500 font-bold">➜</span>
@@ -344,7 +460,7 @@
                           key={m.id}
                           onClick={() => { setSoloMember(m); setSoloStep(0); setSoloScores({}); setSoloHistory([]); }}
                           className={`px-3 py-1.5 rounded-full text-xs font-black flex items-center gap-1 shrink-0 ${
-                            soloMember.id === m.id ? 'bg-amber-500 text-white shadow-xs' : 'bg-white border border-gray-200 text-gray-600'
+                            soloMember.id === m.id ? 'bg-amber-500 text-white shadow-2xs' : 'bg-white border border-gray-200 text-gray-600'
                           }`}
                         >
                           <span>{m.avatar}</span>
@@ -353,7 +469,7 @@
                       ))}
                     </div>
 
-                    {/* 진행률 바 & 이전 질문 버튼 */}
+                    {/* 진행률 바 & 되돌아가기 */}
                     <div className="flex items-center justify-between text-xs font-bold text-gray-400">
                       <div className="flex items-center gap-2">
                         <span>{soloMember.name}의 가치관</span>
@@ -375,8 +491,8 @@
                       ></div>
                     </div>
 
-                    {/* 1문항 1스크린 대형 질문 카드 */}
-                    <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-xs">
+                    {/* 1문항 4지선다형 질문 카드 */}
+                    <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-2xs">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-black text-amber-600 uppercase">
                           Q{soloStep + 1}. {activeQuestions[soloStep].title}
@@ -384,85 +500,87 @@
                         {soloStep > 0 && (
                           <button
                             onClick={handleSoloPrev}
-                            className="text-[11px] text-gray-400 hover:text-amber-700 font-bold"
+                            className="text-[11px] text-gray-400 active:text-amber-700 font-bold"
                           >
-                            ↺ 이전 질문으로 돌아가기
+                            ↺ 이전 질문
                           </button>
                         )}
                       </div>
 
-                      <h3 className="text-lg font-black text-gray-900 mt-1 mb-5 leading-snug">
+                      <h3 className="text-base font-black text-gray-900 mt-1 mb-4 leading-snug">
                         {activeQuestions[soloStep].question}
                       </h3>
 
-                      {/* 선택지 2개 */}
-                      <div className="space-y-3">
-                        <button
-                          onClick={() => handleSoloChoice(activeQuestions[soloStep].optionA.valueKey)}
-                          className="w-full text-left p-4 bg-amber-50/70 active:bg-amber-100 border-2 border-amber-200 rounded-2xl flex items-start gap-3"
-                        >
-                          <span className="text-3xl shrink-0">{activeQuestions[soloStep].optionA.emoji}</span>
-                          <div>
-                            <div className="text-base font-black text-gray-900 mb-0.5">
-                              {activeQuestions[soloStep].optionA.title}
+                      {/* 4개 보기 버튼 */}
+                      <div className="space-y-2.5">
+                        {activeQuestions[soloStep].options.map((opt, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleSoloChoice(opt.valueKey)}
+                            className="w-full text-left p-3.5 bg-amber-50/40 active:bg-amber-100/80 border-2 border-amber-200 active:border-amber-400 rounded-2xl flex items-start gap-2.5 transition-all"
+                          >
+                            <span className="w-6 h-6 rounded-lg bg-amber-500 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                              {optionLabels[idx]}
+                            </span>
+                            <div className="flex-1">
+                              <div className="text-sm font-black text-gray-900 leading-tight mb-0.5">
+                                {opt.text}
+                              </div>
+                              <div className="text-[10px] text-amber-800/80 font-bold">
+                                💡 {opt.desc}
+                              </div>
                             </div>
-                            <div className="text-xs text-gray-700 leading-relaxed font-medium">
-                              {activeQuestions[soloStep].optionA.desc}
-                            </div>
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => handleSoloChoice(activeQuestions[soloStep].optionB.valueKey)}
-                          className="w-full text-left p-4 bg-indigo-50/70 active:bg-indigo-100 border-2 border-indigo-200 rounded-2xl flex items-start gap-3"
-                        >
-                          <span className="text-3xl shrink-0">{activeQuestions[soloStep].optionB.emoji}</span>
-                          <div>
-                            <div className="text-base font-black text-gray-900 mb-0.5">
-                              {activeQuestions[soloStep].optionB.title}
-                            </div>
-                            <div className="text-xs text-gray-700 leading-relaxed font-medium">
-                              {activeQuestions[soloStep].optionB.desc}
-                            </div>
-                          </div>
-                        </button>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  /* 솔로 완료 */
+                  /* 솔로 완료 (상세 평가 + 6대 영역 5개 이상 추천) */
                   <div className="space-y-5">
                     {(() => {
-                      const topKey = getTopValue(soloScores);
+                      const topKey = viewingRecord?.topKey || getTopValue(soloScores);
                       const topData = SIX_DIMENSIONS_RECOMMENDATIONS[topKey] || SIX_DIMENSIONS_RECOMMENDATIONS.autonomy;
-                      const isAdult = soloMember.age >= 20;
+                      const currentPerson = viewingRecord?.member || soloMember;
+                      const isAdult = currentPerson.age >= 20;
 
                       return (
                         <>
                           <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-3xl p-6 text-center shadow-md">
-                            <span className="text-5xl">{soloMember.avatar}</span>
-                            <h2 className="text-2xl font-black mt-2 mb-1">{soloMember.name}의 가치관 나침반</h2>
-                            <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-xs font-black mt-1">
-                              핵심 닻: {topData.name} ({courseCount}문항 분석)
+                            <span className="text-5xl">{currentPerson.avatar}</span>
+                            <h2 className="text-xl font-black mt-2 mb-1">{currentPerson.name}의 가치관 나침반</h2>
+                            <div className="text-sm font-extrabold text-amber-100">
+                              "{topData.name}"
                             </div>
+                            <div className="inline-block px-3 py-0.5 bg-white/20 rounded-full text-[11px] font-bold mt-1">
+                              {topData.badge}
+                            </div>
+                          </div>
+
+                          {/* 심층 철학 총평 */}
+                          <div className="bg-white border-2 border-amber-300 rounded-3xl p-5 shadow-2xs">
+                            <div className="text-xs font-black text-amber-700 mb-2">💭 심층 인생 철학 총평</div>
+                            <p className="text-sm text-gray-800 font-bold leading-relaxed italic border-l-4 border-amber-500 pl-3">
+                              "{topData.philosophy}"
+                            </p>
                           </div>
 
                           {/* 6대 영역 서브 탭 */}
                           <div>
                             <div className="flex gap-1.5 overflow-x-auto pb-2 custom-scroll">
                               {[
-                                { id: 'career', label: '💼 직업' },
-                                { id: 'study', label: '📚 공부' },
-                                { id: 'hobby', label: '🎨 취미' },
-                                { id: 'play', label: '🎲 놀이' },
-                                { id: 'travel', label: '🗺️ 여행지' },
-                                { id: 'life', label: '☀️ 생활활동' }
+                                { id: 'career', label: '💼 직업 (5종)' },
+                                { id: 'study', label: '📚 공부 (5종)' },
+                                { id: 'hobby', label: '🎨 취미 (5종)' },
+                                { id: 'play', label: '🎲 놀이 (5종)' },
+                                { id: 'travel', label: '🗺️ 여행 (5종)' },
+                                { id: 'life', label: '☀️ 일상 (5종)' }
                               ].map(t => (
                                 <button
                                   key={t.id}
                                   onClick={() => setActiveRecoTab(t.id)}
                                   className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition-all ${
-                                    activeRecoTab === t.id ? 'bg-amber-500 text-white shadow-xs' : 'bg-white border border-gray-200 text-gray-600'
+                                    activeRecoTab === t.id ? 'bg-amber-500 text-white shadow-2xs' : 'bg-white border border-gray-200 text-gray-600'
                                   }`}
                                 >
                                   {t.label}
@@ -470,92 +588,99 @@
                               ))}
                             </div>
 
-                            <div className="bg-white border-2 border-amber-200 rounded-3xl p-5 shadow-xs mt-2">
+                            {/* 탭 내용 (5개 구체적 리스트) */}
+                            <div className="bg-white border-2 border-amber-200 rounded-3xl p-4 shadow-2xs mt-2">
                               {activeRecoTab === 'career' && (
-                                <div>
-                                  <span className="text-[11px] font-black text-amber-600">01. 맞춤 직업/역할</span>
-                                  <h3 className="text-base font-black text-gray-900 mt-1 mb-2">가치 실현형 커리어 모델</h3>
-                                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 font-bold text-amber-950 text-sm mb-2 leading-relaxed">
-                                    {isAdult ? topData.career.adult : topData.career.child}
-                                  </div>
-                                  <p className="text-xs text-gray-600 leading-relaxed">
-                                    {isAdult ? '생계를 넘어 내 가치관을 온전히 발현할 수 있는 독립적 생계 모델입니다.' : '스스로 퀘스트를 정하고 주도적으로 문제를 해결하는 미래형 인재로 자라납니다.'}
-                                  </p>
+                                <div className="space-y-2">
+                                  <div className="text-xs font-black text-amber-700 mb-1">💼 추천 직업 및 역할 5가지</div>
+                                  {(isAdult ? topData.career.adult : topData.career.child).map((item, idx) => (
+                                    <div key={idx} className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 flex items-start gap-2">
+                                      <span className="w-5 h-5 rounded-md bg-amber-500 text-white font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                                        {idx + 1}
+                                      </span>
+                                      <span className="text-xs font-bold text-gray-800 leading-snug">{item}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
 
                               {activeRecoTab === 'study' && (
-                                <div>
-                                  <span className="text-[11px] font-black text-sky-600">02. 의미 있는 공부</span>
-                                  <h3 className="text-base font-black text-gray-900 mt-1 mb-2">지적 호기심과 세계의 확장</h3>
-                                  <div className="p-3 bg-sky-50 rounded-xl border border-sky-200 font-bold text-sky-950 text-sm mb-2 leading-relaxed">
-                                    {topData.study}
-                                  </div>
-                                  <p className="text-xs text-gray-600 leading-relaxed">
-                                    단순 점수가 아닌, 세상을 더 깊고 지혜롭게 바라보는 지적 탐험입니다.
-                                  </p>
+                                <div className="space-y-2">
+                                  <div className="text-xs font-black text-sky-700 mb-1">📚 추천 공부 및 배움 분야 5가지</div>
+                                  {topData.study.map((item, idx) => (
+                                    <div key={idx} className="p-3 bg-sky-50/70 rounded-xl border border-sky-200 flex items-start gap-2">
+                                      <span className="w-5 h-5 rounded-md bg-sky-500 text-white font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                                        {idx + 1}
+                                      </span>
+                                      <span className="text-xs font-bold text-gray-800 leading-snug">{item}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
 
                               {activeRecoTab === 'hobby' && (
-                                <div>
-                                  <span className="text-[11px] font-black text-emerald-600">03. 몰입(Flow) 취미</span>
-                                  <h3 className="text-base font-black text-gray-900 mt-1 mb-2">능동적으로 창조하는 여가</h3>
-                                  <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 font-bold text-emerald-950 text-sm mb-2 leading-relaxed">
-                                    {topData.hobby}
-                                  </div>
-                                  <p className="text-xs text-gray-600 leading-relaxed">
-                                    시간 가는 줄 모르고 손끝과 온몸의 감각을 깨우는 깊은 쉼의 시간입니다.
-                                  </p>
+                                <div className="space-y-2">
+                                  <div className="text-xs font-black text-emerald-700 mb-1">🎨 추천 몰입 취미 5가지</div>
+                                  {topData.hobby.map((item, idx) => (
+                                    <div key={idx} className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 flex items-start gap-2">
+                                      <span className="w-5 h-5 rounded-md bg-emerald-500 text-white font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                                        {idx + 1}
+                                      </span>
+                                      <span className="text-xs font-bold text-gray-800 leading-snug">{item}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
 
                               {activeRecoTab === 'play' && (
-                                <div>
-                                  <span className="text-[11px] font-black text-yellow-700">04. 순수 유희와 놀이 (Play)</span>
-                                  <h3 className="text-base font-black text-gray-900 mt-1 mb-2">동심과 생명력을 깨우는 놀이</h3>
-                                  <div className="p-3 bg-yellow-50 rounded-xl border border-yellow-200 font-bold text-yellow-950 text-sm mb-2 leading-relaxed">
-                                    {topData.play}
-                                  </div>
-                                  <p className="text-xs text-gray-600 leading-relaxed">
-                                    어른에게는 굳은 마음을 녹이는 웃음을, 아이에게는 살아있는 기쁨을 줍니다.
-                                  </p>
+                                <div className="space-y-2">
+                                  <div className="text-xs font-black text-yellow-700 mb-1">🎲 추천 순수 유희와 놀이 5가지</div>
+                                  {topData.play.map((item, idx) => (
+                                    <div key={idx} className="p-3 bg-yellow-50/70 rounded-xl border border-yellow-200 flex items-start gap-2">
+                                      <span className="w-5 h-5 rounded-md bg-yellow-500 text-white font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                                        {idx + 1}
+                                      </span>
+                                      <span className="text-xs font-bold text-gray-800 leading-snug">{item}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
 
                               {activeRecoTab === 'travel' && (
-                                <div>
-                                  <span className="text-[11px] font-black text-rose-600">05. 성찰의 여행지</span>
-                                  <h3 className="text-base font-black text-gray-900 mt-1 mb-2">내면의 쉼과 전환의 여정</h3>
-                                  <div className="p-3 bg-rose-50 rounded-xl border border-rose-200 font-bold text-rose-950 text-sm mb-2 leading-relaxed">
-                                    {topData.travel}
-                                  </div>
-                                  <p className="text-xs text-gray-600 leading-relaxed">
-                                    복잡한 관광지를 벗어나 나만의 고요한 영감을 채우는 성찰지입니다.
-                                  </p>
+                                <div className="space-y-2">
+                                  <div className="text-xs font-black text-rose-700 mb-1">🗺️ 추천 성찰 여행지 5곳</div>
+                                  {topData.travel.map((item, idx) => (
+                                    <div key={idx} className="p-3 bg-rose-50/70 rounded-xl border border-rose-200 flex items-start gap-2">
+                                      <span className="w-5 h-5 rounded-md bg-rose-500 text-white font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                                        {idx + 1}
+                                      </span>
+                                      <span className="text-xs font-bold text-gray-800 leading-snug">{item}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
 
                               {activeRecoTab === 'life' && (
-                                <div>
-                                  <span className="text-[11px] font-black text-purple-600">06. 생활 리추얼</span>
-                                  <h3 className="text-base font-black text-gray-900 mt-1 mb-2">하루를 받쳐주는 활력 습관</h3>
-                                  <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 font-bold text-purple-950 text-sm mb-2 leading-relaxed">
-                                    {topData.life}
-                                  </div>
-                                  <p className="text-xs text-gray-600 leading-relaxed">
-                                    매일 아침 심장을 두근거리게 만드는 작은 가치 일치 루틴입니다.
-                                  </p>
+                                <div className="space-y-2">
+                                  <div className="text-xs font-black text-purple-700 mb-1">☀️ 추천 일상 리추얼 5가지</div>
+                                  {topData.life.map((item, idx) => (
+                                    <div key={idx} className="p-3 bg-purple-50/70 rounded-xl border border-purple-200 flex items-start gap-2">
+                                      <span className="w-5 h-5 rounded-md bg-purple-500 text-white font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                                        {idx + 1}
+                                      </span>
+                                      <span className="text-xs font-bold text-gray-800 leading-snug">{item}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </div>
                           </div>
 
                           <button
-                            onClick={() => { setSoloFinished(false); setSoloStep(0); setSoloScores({}); setSoloHistory([]); }}
-                            className="w-full py-4 bg-amber-500 active:bg-amber-600 text-white font-black text-base rounded-2xl shadow-xs"
+                            onClick={() => { setSoloFinished(false); setSoloStep(0); setSoloScores({}); setSoloHistory([]); setViewingRecord(null); setCurrentTab('home'); }}
+                            className="w-full py-3.5 bg-amber-500 active:bg-amber-600 text-white font-black text-sm rounded-2xl shadow-2xs"
                           >
-                            다시 진행하기 / 다른 가족 하기
+                            메인 화면으로 돌아가기 🏠
                           </button>
                         </>
                       );
@@ -570,13 +695,13 @@
               <div>
                 {!familyFinished ? (
                   <div className="space-y-4">
-                    {/* 상단 턴 안내 배너 & 이전 턴 버튼 */}
-                    <div className="bg-indigo-900 text-white rounded-3xl p-5 shadow-xs flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-4xl animate-bounce">{FAMILY_MEMBERS[familyTurn].avatar}</span>
+                    {/* 상단 턴 안내 배너 */}
+                    <div className="bg-indigo-900 text-white rounded-3xl p-4 shadow-2xs flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-3xl animate-bounce">{FAMILY_MEMBERS[familyTurn].avatar}</span>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-indigo-300">
+                            <span className="text-[11px] font-bold text-indigo-300">
                               Q{familyRound + 1} · {FAMILY_MEMBERS[familyTurn].name}의 턴
                             </span>
                             {familyHistory.length > 0 && (
@@ -584,20 +709,20 @@
                                 onClick={handleFamilyPrev}
                                 className="text-[10px] bg-indigo-700 px-1.5 py-0.5 rounded text-amber-300 font-black"
                               >
-                                ↺ 이전 턴
+                                ↺ 이전
                               </button>
                             )}
                           </div>
-                          <div className="text-lg font-black text-amber-300">
+                          <div className="text-base font-black text-amber-300">
                             스마트폰을 탭해주세요!
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1">
                         {FAMILY_MEMBERS.map((m, idx) => (
                           <div
                             key={m.id}
-                            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
                               idx === familyTurn ? 'bg-amber-400 ring-2 ring-white scale-110' : 'bg-indigo-800 opacity-60'
                             }`}
                           >
@@ -608,7 +733,7 @@
                     </div>
 
                     {/* 라운드 딜레마 카드 */}
-                    <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-xs">
+                    <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-2xs">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-black text-indigo-600">
                           {activeQuestions[familyRound].title}
@@ -616,65 +741,67 @@
                         {familyHistory.length > 0 && (
                           <button
                             onClick={handleFamilyPrev}
-                            className="text-[11px] text-gray-400 hover:text-indigo-600 font-bold"
+                            className="text-[11px] text-gray-400 font-bold"
                           >
-                            ↺ 이전 가족 턴으로
+                            ↺ 이전 턴
                           </button>
                         )}
                       </div>
 
-                      <h3 className="text-lg font-black text-gray-900 mt-1 mb-2 leading-snug">
+                      <h3 className="text-base font-black text-gray-900 mt-1 mb-2 leading-snug">
                         {activeQuestions[familyRound].question}
                       </h3>
                       
-                      <div className="p-3 bg-indigo-50 rounded-xl text-xs font-bold text-indigo-900 mb-5 leading-relaxed">
+                      <div className="p-3 bg-indigo-50 rounded-xl text-xs font-bold text-indigo-900 mb-4 leading-relaxed">
                         {activeQuestions[familyRound].familyTopic}
                       </div>
 
-                      {/* 선택지 2개 */}
-                      <div className="space-y-3">
-                        <button
-                          onClick={() => handleFamilyChoice(activeQuestions[familyRound].optionA.valueKey)}
-                          className="w-full text-left p-4 bg-amber-50 active:bg-amber-100 border-2 border-amber-200 rounded-2xl"
-                        >
-                          <div className="text-2xl mb-1">{activeQuestions[familyRound].optionA.emoji}</div>
-                          <div className="font-black text-base text-gray-900 mb-0.5">{activeQuestions[familyRound].optionA.title}</div>
-                          <div className="text-xs text-gray-700 leading-relaxed">{activeQuestions[familyRound].optionA.desc}</div>
-                        </button>
-
-                        <button
-                          onClick={() => handleFamilyChoice(activeQuestions[familyRound].optionB.valueKey)}
-                          className="w-full text-left p-4 bg-indigo-50 active:bg-indigo-100 border-2 border-indigo-200 rounded-2xl"
-                        >
-                          <div className="text-2xl mb-1">{activeQuestions[familyRound].optionB.emoji}</div>
-                          <div className="font-black text-base text-gray-900 mb-0.5">{activeQuestions[familyRound].optionB.title}</div>
-                          <div className="text-xs text-gray-700 leading-relaxed">{activeQuestions[familyRound].optionB.desc}</div>
-                        </button>
+                      {/* 4지선다형 버튼 4개 */}
+                      <div className="space-y-2.5">
+                        {activeQuestions[familyRound].options.map((opt, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleFamilyChoice(opt.valueKey)}
+                            className="w-full text-left p-3.5 bg-indigo-50/50 active:bg-indigo-100 border-2 border-indigo-200 rounded-2xl flex items-start gap-2.5 transition-all"
+                          >
+                            <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                              {optionLabels[idx]}
+                            </span>
+                            <div className="flex-1">
+                              <div className="text-xs font-black text-gray-900 leading-tight mb-0.5">
+                                {opt.text}
+                              </div>
+                              <div className="text-[10px] text-indigo-700 font-bold">
+                                💡 {opt.desc}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  /* 패밀리 완료 */
+                  /* 패밀리 완료 화면 */
                   <div className="space-y-5">
                     <div className="bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-600 text-white rounded-3xl p-6 text-center shadow-md">
                       <div className="text-4xl mb-2">🐻 🦊 🐿️ 🐰</div>
-                      <h2 className="text-2xl font-black mb-1">온 가족 가치관 지도 완성!</h2>
-                      <p className="text-xs text-purple-100">{courseCount}문항 완주 · 서로를 깊이 이해한 소중한 시간</p>
+                      <h2 className="text-xl font-black mb-1">온 가족 가치관 지도 완성!</h2>
+                      <p className="text-xs text-purple-100">서로를 깊이 이해한 소중한 시간 (보관소 저장 완료)</p>
                     </div>
 
-                    <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-xs space-y-3">
-                      <h3 className="font-black text-base text-gray-900">4인 4색 핵심 가치</h3>
+                    <div className="bg-white border border-gray-200 rounded-3xl p-4 shadow-2xs space-y-2.5">
+                      <h3 className="font-black text-sm text-gray-900">4인 4색 핵심 가치</h3>
                       {FAMILY_MEMBERS.map(m => {
-                        const mTopKey = getTopValue(familyScores[m.id]);
+                        const mTopKey = getTopValue((viewingRecord?.familyScores || familyScores)[m.id]);
                         const mTopData = SIX_DIMENSIONS_RECOMMENDATIONS[mTopKey] || SIX_DIMENSIONS_RECOMMENDATIONS.autonomy;
                         return (
-                          <div key={m.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl">
-                            <div className="flex items-center gap-2.5">
+                          <div key={m.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                            <div className="flex items-center gap-2">
                               <span className="text-2xl">{m.avatar}</span>
-                              <span className="font-bold text-sm text-gray-800">{m.name}</span>
+                              <span className="font-bold text-xs text-gray-800">{m.name}</span>
                             </div>
-                            <span className="text-xs font-black text-amber-700 px-3 py-1 bg-amber-100 rounded-full">
-                              {mTopData.name}
+                            <span className="text-xs font-black text-amber-700 px-2.5 py-0.5 bg-amber-100 rounded-full">
+                              {mTopData.name.split(' ')[0]}
                             </span>
                           </div>
                         );
@@ -683,7 +810,7 @@
 
                     <button
                       onClick={() => setCurrentTab('charter')}
-                      className="w-full py-4 bg-indigo-600 active:bg-indigo-700 text-white font-black text-base rounded-2xl shadow-xs"
+                      className="w-full py-3.5 bg-indigo-600 active:bg-indigo-700 text-white font-black text-sm rounded-2xl shadow-2xs"
                     >
                       우리 가족 삶의 헌장 보러가기 📜
                     </button>
@@ -695,12 +822,12 @@
             {/* -------------------- [TAB 4: FAMILY CHARTER] -------------------- */}
             {currentTab === 'charter' && (
               <div className="space-y-5">
-                <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-6 shadow-xs">
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-5 shadow-2xs">
                   <div className="text-center mb-3">
                     <span className="text-4xl">📜</span>
-                    <h2 className="text-xl font-black text-amber-950 mt-1">우리 가족 삶의 헌장</h2>
+                    <h2 className="text-lg font-black text-amber-950 mt-1">우리 가족 삶의 헌장</h2>
                   </div>
-                  <div className="space-y-3 text-xs text-gray-800 leading-relaxed font-medium">
+                  <div className="space-y-2.5 text-xs text-gray-800 leading-relaxed font-medium">
                     <div className="p-3 bg-white rounded-xl border border-amber-200 flex items-start gap-2">
                       <span className="text-amber-600 font-bold">1.</span>
                       <span><strong>각자의 속도를 존중합니다:</strong> 아빠의 쉼, 엄마의 새출발, 아이들의 성장을 재촉하지 않고 지지합니다.</span>
@@ -716,27 +843,27 @@
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-xs">
-                  <h3 className="text-sm font-black text-gray-900 mb-3 flex items-center gap-1.5">
-                    <span>✨</span> 온 가족 6대 버킷 프로젝트 (놀이 포함)
+                <div className="bg-white border border-gray-200 rounded-3xl p-4 shadow-2xs">
+                  <h3 className="text-xs font-black text-gray-900 mb-3 flex items-center gap-1.5">
+                    <span>✨</span> 온 가족 6대 버킷 프로젝트
                   </h3>
-                  <div className="space-y-2.5 text-xs">
-                    <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200">
+                  <div className="space-y-2 text-xs">
+                    <div className="p-2 bg-amber-50 rounded-xl border border-amber-200">
                       <strong>💼 가족 팝업:</strong> 굿즈 기획 및 소품 펀딩 해보기
                     </div>
-                    <div className="p-2.5 bg-sky-50 rounded-xl border border-sky-200">
+                    <div className="p-2 bg-sky-50 rounded-xl border border-sky-200">
                       <strong>📚 주말 인문학 살롱:</strong> 한 달에 한 편 명작 영화/책 토론
                     </div>
-                    <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                    <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-200">
                       <strong>🎨 온 가족 협동 목공:</strong> 거실 테이블이나 가족 문패 깎기
                     </div>
-                    <div className="p-2.5 bg-yellow-50 rounded-xl border border-yellow-200 font-bold text-yellow-950">
+                    <div className="p-2 bg-yellow-50 rounded-xl border border-yellow-200 font-bold text-yellow-950">
                       <strong>🎲 가족 보드게임 리그:</strong> 주말 간식 내기 리그전
                     </div>
-                    <div className="p-2.5 bg-rose-50 rounded-xl border border-rose-200">
+                    <div className="p-2 bg-rose-50 rounded-xl border border-rose-200">
                       <strong>🗺️ 제주 올레길 트레킹:</strong> 바다 바람을 맞으며 걷는 3박 4일
                     </div>
-                    <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-200">
+                    <div className="p-2 bg-purple-50 rounded-xl border border-purple-200">
                       <strong>☀️ 저녁 15분 하트 타임:</strong> 매일 1가지 감사 나누기
                     </div>
                   </div>
@@ -760,7 +887,7 @@
                 <div className="space-y-2">
                   <button
                     onClick={() => setShowPassModal(false)}
-                    className="w-full py-3 bg-amber-500 active:bg-amber-600 text-white font-black text-sm rounded-xl shadow-xs"
+                    className="w-full py-3 bg-amber-500 active:bg-amber-600 text-white font-black text-sm rounded-xl shadow-2xs"
                   >
                     준비 완료! 시작하기 ➜
                   </button>

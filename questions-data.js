@@ -1,559 +1,1198 @@
 // ========================================================
-// ARGO - 50개 심층 가치관 딜레마 & 6대 영역 추천 데이터베이스
-// 학술적 기반: 샬롬 슈워츠 가치이론, 에드가 샤인 경력 닻,
-// 미하이 칙센트미하이 몰입(Flow), ACT 수용전념치료, 호모 루덴스(놀이)
+// ARGO - 50개 심층 상황 시나리오 4지선다형 & 6대 영역 5종 이상 추천 DB
+// 가치관 스펙트럼: 자율, 안정, 모험, 평온, 공헌, 장인, 탐구, 성취, 유희, 유대
 // ========================================================
 
 const THEMES = [
-  { id: 'theme_1', name: '테마 1: 자율과 안정 (Q01~Q10)', desc: '내 삶의 주도권과 심리적 안전지대의 무게중심' },
-  { id: 'theme_2', name: '테마 2: 도전과 평온 (Q11~Q20)', desc: '가슴 뛰는 모험의 불꽃과 고요한 내면의 호수' },
-  { id: 'theme_3', name: '테마 3: 성취와 공헌 (Q21~Q30)', desc: '독보적 전문성과 세상을 보듬는 이타적 나눔' },
-  { id: 'theme_4', name: '테마 4: 지적 탐구와 창작 (Q31~Q40)', desc: '진리를 향한 순수한 호기심과 무에서 유를 빚는 창조' },
-  { id: 'theme_5', name: '테마 5: 놀이와 활력 (Q41~Q50)', desc: '순수한 유희(호모 루덴스), 관계의 웃음, 생명력' }
+  { id: 'theme_1', name: '테마 1: 일상과 자유의 선택 (Q01~Q10)', desc: '갑작스러운 자유 시간과 생활 터전의 변화 속에서 드러나는 나의 본성' },
+  { id: 'theme_2', name: '테마 2: 위기와 도전의 극복 (Q11~Q20)', desc: '예기치 못한 돌발 상황과 모험의 기로에서 내가 취하는 태도' },
+  { id: 'theme_3', name: '테마 3: 인간관계와 세상과의 연결 (Q21~Q30)', desc: '타인과의 갈등, 나눔, 인정, 소속감 사이에서 무게를 두는 가치' },
+  { id: 'theme_4', name: '테마 4: 지적 호기심과 창작의 열망 (Q31~Q40)', desc: '배움, 새로운 기술, 작품을 만들 때 내 심장을 뛰게 하는 동력' },
+  { id: 'theme_5', name: '테마 5: 유희와 실존적 행복 (Q41~Q50)', desc: '놀이, 웃음, 휴식, 그리고 인생의 마지막 날에 남기고 싶은 유산' }
 ];
 
+// 50개 4지선다형 상황 시나리오 문항
 const FIFTY_DILEMMAS = [
-  // --- 테마 1: 자율과 안정 (Q01 ~ Q10) ---
+  // --- 테마 1: 일상과 자유의 선택 (Q01 ~ Q10) ---
   {
     id: 'q01', themeId: 'theme_1',
-    title: '시간의 주도권',
-    question: '나에게 더 깊은 해방감과 자존감을 주는 시간의 형태는?',
-    familyTopic: '가족 대화: "정해진 시간표대로 움직일 때 마음이 편한가요, 내 기분과 생각대로 시간을 쓸 때 신나나요?"',
-    optionA: { title: '완전한 자율의 시간', desc: '아침에 눈떠서 밤에 잠들 때까지 내 의지대로 통제하는 하루 (실패도 성공도 오롯이 내 책임)', valueKey: 'autonomy', emoji: '🦅' },
-    optionB: { title: '예측 가능한 규칙의 시간', desc: '정해진 루틴과 안정적인 가이드라인 속에서 평온하게 집중하는 하루 (불확실성을 최소화함)', valueKey: 'security', emoji: '🏰' }
+    title: '갑자기 찾아온 주 4일제와 금요일',
+    question: '회사나 학교에서 갑자기 매주 금요일이 공식 자유 휴일이 되었습니다. 당신이 보낼 가장 이상적인 금요일은?',
+    familyTopic: '가족 대화: "금요일 하루가 온전히 내 시간이 된다면 각자 무엇을 가장 먼저 해보고 싶나요?"',
+    options: [
+      { text: '알람을 끄고 일어나 혼자서 계획 없이 훌쩍 카페나 교외로 드라이브를 떠난다.', valueKey: 'autonomy', desc: '온전한 개인적 자율성' },
+      { text: '가족들과 아침 식사를 함께하고, 밀린 집안일을 깔끔히 정리하며 안온하게 보낸다.', valueKey: 'connection', desc: '가족과의 유대와 안정' },
+      { text: '그동안 배우고 싶었던 전문 기술이나 어학 온·오프라인 강좌에 집중 등록해 공부한다.', valueKey: 'mastery', desc: '역량 강화와 배움' },
+      { text: '지역 봉사센터나 유기동물 보호소에 정기 봉사활동을 신청해 의미 있는 땀을 흘린다.', valueKey: 'altruism', desc: '사회적 기여와 나눔' }
+    ]
   },
   {
     id: 'q02', themeId: 'theme_1',
-    title: '공간의 경계',
-    question: '내가 머물고 싶은 일과 삶의 터전은 어떤 모습인가요?',
-    familyTopic: '가족 대화: "어디든 떠돌며 일하는 유목민이 좋나요, 단단하고 아늑한 나만의 고정된 아지트가 좋나요?"',
-    optionA: { title: '디지털 노마드의 유목민적 삶', desc: '장소에 구애받지 않고 언제든 짐을 싸서 떠날 수 있는 열린 공간', valueKey: 'autonomy', emoji: '🎒' },
-    optionB: { title: '뿌리내린 든든한 보금자리', desc: '믿을 수 있는 이웃과 오래도록 함께 가꾸는 안온하고 견고한 공간', valueKey: 'security', emoji: '🏡' }
+    title: '1년 동안 무상으로 살 수 있는 집의 선택',
+    question: '전 세계 어디든 원하는 형태의 주거 공간에서 1년간 무상 거주할 기회가 주어졌습니다. 당신의 선택은?',
+    familyTopic: '가족 대화: "1년 동안 어디서 살 수 있다면 어떤 집에서 살아보고 싶나요?"',
+    options: [
+      { text: '인터넷만 연결된 바닷가 언덕 위 통유리 단독 주택 (내 마음대로 작업하고 사색하는 집)', valueKey: 'autonomy', desc: '자유로운 독립 공간' },
+      { text: '편의시설과 의료, 보안이 완벽하게 갖추어진 도심 속 최신 아파트 단지', valueKey: 'security', desc: '안전과 편리한 울타리' },
+      { text: '지리산 자락 조용한 한옥 마을의 흙마당 딸린 전통 고택 (장작 패고 차 마시는 공간)', valueKey: 'peace', desc: '자연과의 합일과 평온' },
+      { text: '다양한 국적의 예술가와 창작자들이 모여 사는 활기찬 글로벌 코리빙 하우스', valueKey: 'adventure', desc: '다채로운 자극과 모험' }
+    ]
   },
   {
     id: 'q03', themeId: 'theme_1',
-    title: '의사결정의 무게',
-    question: '중요한 기로에 섰을 때 나를 더 안도하게 만드는 것은?',
-    familyTopic: '가족 대화: "모든 결정을 혼자 내리는 게 편한가요, 함께 의논하고 다수결로 정하는 게 편한가요?"',
-    optionA: { title: '단독 결정과 전적인 책임', desc: '타인의 승인이나 타협 없이 내 직관과 소신만으로 전진하는 방식', valueKey: 'autonomy', emoji: '🧭' },
-    optionB: { title: '집단적 합의와 공동 책임', desc: '서로의 지혜를 모으고 위험을 분산하여 함께 걸어가는 방식', valueKey: 'security', emoji: '🤝' }
+    title: '예상치 못한 5천만 원의 지원금 용처',
+    question: '"자신과 가족의 삶의 질 향상"만을 목적으로 쓸 수 있는 5천만 원이 생겼습니다. 가장 끌리는 배분 방식은?',
+    familyTopic: '가족 대화: "가족을 위해 쓸 수 있는 목돈이 생긴다면 어떤 곳에 가장 먼저 쓰고 싶나요?"',
+    options: [
+      { text: '1인 지식 창업이나 독립 프로젝트를 시작하기 위한 개인 작업실 및 연구 자금', valueKey: 'autonomy', desc: '자기주도적 독립 자산' },
+      { text: '가족 비상 자금 통장에 넣어두고 저축하여 미래의 불안을 완전히 해소하기', valueKey: 'security', desc: '심리적 안전판 확보' },
+      { text: '온 가족이 6개월간 세계의 낯선 문명을 탐험하는 배낭여행 경비로 사용하기', valueKey: 'adventure', desc: '경험과 시야의 확장' },
+      { text: '주변의 소외된 이웃이나 결식아동을 돕는 지속가능한 소규모 장학 펀드 조성', valueKey: 'altruism', desc: '사회적 환원과 보람' }
+    ]
   },
   {
     id: 'q04', themeId: 'theme_1',
-    title: '수입과 생계의 철학',
-    question: '내가 진정으로 바라는 경제적 자유의 본질은?',
-    familyTopic: '가족 대화: "매달 정해진 돈이 꼬박꼬박 나오는 게 좋을까요, 들쭉날쭉해도 내 실력대로 버는 게 좋을까요?"',
-    optionA: { title: '무한한 가능성과 독립 채산', desc: '고정급은 없지만 내 역량과 시도에 따라 상한선 없이 보상받는 독립성', valueKey: 'autonomy', emoji: '📈' },
-    optionB: { title: '흔들리지 않는 고정적 안전망', desc: '매월 예측 가능한 수입을 통해 가족의 일상을 든든하게 받쳐주는 보장', valueKey: 'security', emoji: '🛡️' }
+    title: '아침 기상 후 첫 30분의 시간',
+    question: '하루를 시작할 때 당신의 마음에 가장 큰 활력과 안정감을 주는 아침 루틴은?',
+    familyTopic: '가족 대화: "아침에 일어났을 때 어떤 기분과 행동으로 하루를 시작하고 싶나요?"',
+    options: [
+      { text: '방해받지 않고 조용히 차를 마시며 창밖을 보거나 멍하니 내면을 관조하기', valueKey: 'peace', desc: '고요한 평온과 쉼' },
+      { text: '오늘 해야 할 핵심 목표와 퀘스트를 체크리스트로 작성하며 실행 의지 다지기', valueKey: 'impact', desc: '실행과 성취 지향' },
+      { text: '신나는 음악을 틀고 가벼운 스트레칭이나 댄스로 몸의 잠을 깨우기', valueKey: 'playfulness', desc: '유쾌한 활력과 유희' },
+      { text: '가족들을 따뜻하게 안아주고 아침 인사를 건네며 소소한 대화 나누기', valueKey: 'connection', desc: '관계와 사랑의 확인' }
+    ]
   },
   {
     id: 'q05', themeId: 'theme_1',
-    title: '조직과 소속감',
-    question: '나의 정체성을 더 빛나게 하는 위치는 어디인가요?',
-    familyTopic: '가족 대화: "큰 무리의 일원으로 인정받는 게 좋나요, 독자적인 1인 전문가로 불리는 게 좋나요?"',
-    optionA: { title: '고독하지만 자유로운 1인 주체', desc: '어떤 명함이나 조직의 그늘 뒤에 숨지 않고 오롯이 내 이름 석 자로 서는 삶', valueKey: 'autonomy', emoji: '👤' },
-    optionB: { title: '존경받는 공동체의 든든한 일원', desc: '역사와 전통이 있는 팀에서 서로를 지켜주며 유대감을 나누는 삶', valueKey: 'security', emoji: '👥' }
+    title: '일하는 방식의 선호도',
+    question: '나의 능력을 발휘할 때 가장 스트레스가 적고 몰입이 잘 되는 형태는?',
+    familyTopic: '가족 대화: "어떤 환경에서 공부하거나 일할 때 가장 능률이 오르고 신나나요?"',
+    options: [
+      { text: '모든 결정과 프로세스를 내가 주도하고 결과에 책임을 지는 1인 방식', valueKey: 'autonomy', desc: '완전한 재량권' },
+      { text: '역할 분담이 명확하고 믿을 수 있는 팀원들과 실시간 소통하며 협력하는 방식', valueKey: 'security', desc: '안정적인 팀워크' },
+      { text: '정해진 틀을 깨고 아무도 시도해보지 않은 독창적인 실험을 허용하는 방식', valueKey: 'adventure', desc: '창의적 혁신과 도전' },
+      { text: '오랜 시간 묵묵히 한 분야를 깊게 파고들어 완성도를 극한으로 끌어올리는 방식', valueKey: 'mastery', desc: '장인적 완벽주의' }
+    ]
   },
   {
     id: 'q06', themeId: 'theme_1',
-    title: '실패에 대한 태도',
-    question: '불가피한 실패를 마주했을 때 더 견디기 쉬운 상황은?',
-    familyTopic: '가족 대화: "내가 고집부리다 실패한 게 덜 억울할까요, 남 시키는 대로 하다 실패한 게 덜 억울할까요?"',
-    optionA: { title: '내 고집대로 하다가 겪은 실패', desc: '적어도 남 탓하지 않고 온전히 내가 선택했기에 후회가 남지 않는 실패', valueKey: 'autonomy', emoji: '⚡' },
-    optionB: { title: '시스템의 한계로 인해 겪은 실패', desc: '혼자 모든 짐을 지지 않고 동료들과 함께 아픔을 나누고 위로받는 실패', valueKey: 'security', emoji: '🩹' }
+    title: '물건을 구매할 때의 기준',
+    question: '오랫동안 쓸 중요한 물건(가구, 전자기기 등)을 고를 때 당신의 첫 번째 기준은?',
+    familyTopic: '가족 대화: "물건을 살 때 성능, 디자인, 실용성, 나눔 중 무엇을 가장 먼저 보나요?"',
+    options: [
+      { text: '남들의 유행과 상관없이 내 고유한 취향과 개성을 완벽히 반영하는 것', valueKey: 'autonomy', desc: '독창적 개성' },
+      { text: '오랜 세월 검증되었고 내구성이 뛰어나 고장 없이 안심하고 쓸 수 있는 것', valueKey: 'security', desc: '신뢰성과 안전' },
+      { text: '장인의 섬세한 손길과 최고의 부품으로 마감된 압도적인 품질의 명품', valueKey: 'mastery', desc: '탁월한 완성도' },
+      { text: '친환경 공정으로 제작되고 수익금 일부가 환경 보호에 기부되는 착한 제품', valueKey: 'altruism', desc: '윤리적 가치 소비' }
+    ]
   },
   {
     id: 'q07', themeId: 'theme_1',
-    title: '규범과 규율',
-    question: '세상의 규칙에 대해 본능적으로 드는 나의 생각은?',
-    familyTopic: '가족 대화: "규칙은 깨고 새로 만들기 위해 있는 걸까요, 질서를 위해 꼭 지켜야 하는 걸까요?"',
-    optionA: { title: '규칙은 언제든 질문하고 재창조하는 것', desc: '불합리하거나 관행적인 규범에 저항하고 나만의 방식을 고안하는 태도', valueKey: 'autonomy', emoji: '🔓' },
-    optionB: { title: '규칙은 혼란을 막고 평화를 지키는 방패', desc: '검증된 매뉴얼과 상호 약속을 준수하여 불필요한 마찰을 줄이는 태도', valueKey: 'security', emoji: '📜' }
+    title: '퇴근/하교 후 저녁 시간의 활용',
+    question: '하루의 공식 일정이 끝난 저녁, 나를 가장 행복하게 채워주는 활동은?',
+    familyTopic: '가족 대화: "저녁 먹고 난 뒤 가장 힐링이 되는 시간은 각자 언제인가요?"',
+    options: [
+      { text: '좋아하는 과학, 철학, 역사 교양 도서나 다큐멘터리를 보며 생각에 잠기기', valueKey: 'curiosity', desc: '지적 탐구와 사색' },
+      { text: '온 가족이나 친구들과 보드게임을 하거나 재미있는 게임을 하며 웃기', valueKey: 'playfulness', desc: '순수한 유희와 놀이' },
+      { text: '내 손으로 직접 가구를 손질하거나 악기를 연습하며 실력을 가다듬기', valueKey: 'mastery', desc: '숙련과 창작의 몰입' },
+      { text: '은은한 조명을 켜고 따뜻한 족욕과 명상으로 하루의 피로를 털어내기', valueKey: 'peace', desc: '심신의 평온과 이완' }
+    ]
   },
   {
     id: 'q08', themeId: 'theme_1',
-    title: '물질과 소유',
-    question: '나에게 더 큰 심리적 풍요를 안겨주는 삶의 형태는?',
-    familyTopic: '가족 대화: "짐이 적고 가벼운 미니멀 라이프가 좋나요, 내 취향의 물건들이 꽉 찬 아늑함이 좋나요?"',
-    optionA: { title: '가벼운 미니멀리즘', desc: '소유물에 얽매이지 않고いつでも 어디로든 떠날 수 있는 홀가분함', valueKey: 'autonomy', emoji: '🍃' },
-    optionB: { title: '풍요로운 비축과 아늑함', desc: '위기 상황에도 끄떡없는 넉넉한 자원과 따뜻하게 채워진 내 공간', valueKey: 'security', emoji: '📦' }
+    title: '새로운 모임에 참여할 때',
+    question: '새로운 동호회나 커뮤니티를 찾는다면 어떤 분위기의 모임에 끌리나요?',
+    familyTopic: '가족 대화: "사람들을 만난다면 어떤 모임에서 어울리고 싶나요?"',
+    options: [
+      { text: '각자의 개성이 강하고 서로의 사생활과 거리를 존중해주는 쿨한 모임', valueKey: 'autonomy', desc: '자율적인 느슨한 연대' },
+      { text: '가족처럼 끈끈하고 경조사를 챙겨주며 서로의 버팀목이 되어주는 따뜻한 모임', valueKey: 'connection', desc: '정서적 애착과 결속' },
+      { text: '등산, 캠핑, 오프로드 등 역동적인 야외 활동을 함께 즐기는 활기찬 모임', valueKey: 'adventure', desc: '짜릿한 아웃도어 모험' },
+      { text: '사회적 기업 아이디어나 지역 문제 해결을 위해 머리를 맞대는 실천 모임', valueKey: 'impact', desc: '사회적 임팩트 창출' }
+    ]
   },
   {
     id: 'q09', themeId: 'theme_1',
-    title: '평판과 타인의 시선',
-    question: '사회적 평가 앞에서 내가 타협할 수 없는 지점은?',
-    familyTopic: '가족 대화: "남들이 조금 이상하게 봐도 내 멋대로 사는 게 좋나요, 남들에게 좋은 사람으로 인정받는 게 좋나요?"',
-    optionA: { title: '괴짜로 불릴지언정 진정한 나다움', desc: '세상의 유행이나 타인의 기대와 달라도 내 고유한 색깔을 고수하는 용기', valueKey: 'autonomy', emoji: '🦹' },
-    optionB: { title: '신뢰받고 호감 주는 사회적 조화', desc: '이웃과 주변인들에게 신뢰를 주고 원만한 관계를 유지하는 성실함', valueKey: 'security', emoji: '😇' }
+    title: '스마트폰과 디지털 기기 사용 습관',
+    question: '스마트폰을 손에 쥐었을 때 가장 많은 시간을 보내는 앱이나 콘텐츠는?',
+    familyTopic: '가족 대화: "스마트폰으로 가장 많이 찾아보고 재미있어하는 것은 무엇인가요?"',
+    options: [
+      { text: '새로운 과학 지식, 심리학, 우주, 역사에 관한 지적 아티클이나 영상', valueKey: 'curiosity', desc: '호기심의 탐구' },
+      { text: '새로운 생산성 도구, 투자 동향, 비즈니스 아이디어 관련 실용 정보', valueKey: 'impact', desc: '실전 성취와 기회' },
+      { text: '힐링 ASMR, 자연의 소리, 차분한 명상 가이드 음악', valueKey: 'peace', desc: '정서적 쉼' },
+      { text: '유쾌한 숏폼, 밈, 예능 하이라이트 등 부담 없이 빵 터지는 콘텐츠', valueKey: 'playfulness', desc: '웃음과 가벼운 유희' }
+    ]
   },
   {
     id: 'q10', themeId: 'theme_1',
-    title: '삶의 최종 목적지',
-    question: '인생의 종착역에서 가장 후회하고 싶지 않은 한 가지는?',
-    familyTopic: '가족 대화: "내 뜻대로 못 살아본 게 더 후회될까요, 가족과 주변을 든든히 지켜주지 못한 게 더 후회될까요?"',
-    optionA: { title: '"내 뜻대로 살아보지 못했다"는 회한', desc: '남의 기대에 맞추느라 내 잠재력을 시험해보지 못한 채 끝나는 삶의 공포', valueKey: 'autonomy', emoji: '🕊️' },
-    optionB: { title: '"소중한 이들을 지켜내지 못했다"는 회한', desc: '위험을 무릅쓰다 가족과 울타리를 위태롭게 만들었던 삶의 공포', valueKey: 'security', emoji: '🛡️' }
+    title: '나만의 공간 꾸미기',
+    question: '내 방이나 서재를 리모델링할 수 있다면 가장 공들이고 싶은 포인트는?',
+    familyTopic: '가족 대화: "내 방을 마음대로 꾸밀 수 있다면 어떤 공간을 꼭 만들고 싶나요?"',
+    options: [
+      { text: '완벽한 방음과 조명 제어로 세상과 차단되는 프라이빗 독립 부스', valueKey: 'autonomy', desc: '고독한 몰입 공간' },
+      { text: '책과 전문 자료를 체계적으로 분류해 둔 정갈한 학자형 연구 책상', valueKey: 'mastery', desc: '전문 지식의 전당' },
+      { text: '식물 화분들과 원목 가구, 따스한 햇살이 가득한 실내 정원형 쉼터', valueKey: 'peace', desc: '자연 친화적 안식처' },
+      { text: '가족이나 친구들이 모여 게임하고 영화를 볼 수 있는 아늑한 라운지', valueKey: 'connection', desc: '소통과 공유의 장' }
+    ]
   },
 
-  // --- 테마 2: 도전과 평온 (Q11 ~ Q20) ---
+  // --- 테마 2: 위기와 도전의 극복 (Q11 ~ Q20) ---
   {
     id: 'q11', themeId: 'theme_2',
-    title: '에너지의 원천',
-    question: '어떤 환경에서 나의 생체 에너지가 가장 솟구치나요?',
-    familyTopic: '가족 대화: "가슴이 쿵쾅거리는 새로운 사건이 터질 때 에너지가 나나요, 조용한 숲길을 걸을 때 에너지가 나나요?"',
-    optionA: { title: '심장을 뛰게 하는 격변과 긴장', desc: '아드레날린이 분비되고 한 치 앞을 모르는 도전 속에서 살아있음을 느낌', valueKey: 'adventure', emoji: '🔥' },
-    optionB: { title: '티끌 하나 없는 고요와 이완', desc: '외부 자극이 멈추고 내면의 호흡이 가지런해지는 순간에 살아있음을 느낌', valueKey: 'peace', emoji: '💧' }
+    title: '여행 중 갑작스러운 폭우로 일정이 취소되었을 때',
+    question: '오랫동안 준비한 야외 가족 여행 중 폭우로 모든 계획이 무산되었습니다. 당신의 반응은?',
+    familyTopic: '가족 대화: "여행 가서 갑자기 비가 쏟아지면 어떻게 시간을 보내고 싶나요?"',
+    options: [
+      { text: '"오히려 좋아!" 비옷을 챙겨 입고 빗속 숲길이나 바닷가를 걸으며 특별한 추억 만들기', valueKey: 'adventure', desc: '역경을 모험으로 전환' },
+      { text: '따뜻한 숙소 거실에 모여 전을 부쳐 먹고 도란도란 옛날이야기를 나누기', valueKey: 'connection', desc: '가족 간의 따스한 연대' },
+      { text: '근처 조용한 미술관이나 도서관을 찾아 지역의 역사와 예술을 탐색하기', valueKey: 'curiosity', desc: '새로운 문화적 배움' },
+      { text: '빗소리를 들으며 방에서 따뜻한 차 한 잔과 함께 깊은 낮잠을 즐기기', valueKey: 'peace', desc: '여유로운 쉼과 수용' }
+    ]
   },
   {
     id: 'q12', themeId: 'theme_2',
-    title: '여행의 스타일',
-    question: '내 영혼을 다시 태어나게 하는 여행의 순간은?',
-    familyTopic: '가족 대화: "거친 정글이나 낯선 오지를 탐험할 때 신나나요, 따뜻한 온천이나 휴양지에서 푹 쉴 때 행복한가요?"',
-    optionA: { title: '거친 미지의 오지 탐험', desc: '언어도 통하지 않는 낯선 곳에서 길을 잃고 뜻밖의 기적을 만나는 여정', valueKey: 'adventure', emoji: '🧭' },
-    optionB: { title: '오랜 쉼과 치유의 휴식처', desc: '바람 소리, 파도 소리를 들으며 책 한 권과 함께 한없이 멍때리는 여정', valueKey: 'peace', emoji: '🏝️' }
+    title: '직장/학교에서 새로운 대형 프로젝트 제안이 왔을 때',
+    question: '아무도 해본 적 없는 미지의 대형 프로젝트 팀장/대표 제안을 받았습니다. 당신의 마음은?',
+    familyTopic: '가족 대화: "아무도 안 해본 어려운 과제가 주어지면 두려움이 앞서나요, 호기심이 앞서나요?"',
+    options: [
+      { text: '실패 확률이 있더라도 내 역량을 입증하고 세상을 놀라게 할 기회이므로 즉시 수락한다.', valueKey: 'impact', desc: '과감한 도전과 성취' },
+      { text: '권한과 자율성을 100% 보장해 주는 조건이라면 나만의 방식으로 밀고 나가겠다.', valueKey: 'autonomy', desc: '독립적 주도권 중시' },
+      { text: '단기 성과보다는 그 과정을 통해 팀원들과 내가 전문적으로 얼마나 성장할지를 먼저 따져본다.', valueKey: 'mastery', desc: '역량의 질적 도약' },
+      { text: '현재의 워라밸과 가족과의 시간을 침해할 위험이 크다면 정중히 고사하거나 역할을 축소한다.', valueKey: 'security', desc: '삶의 균형과 안정' }
+    ]
   },
   {
     id: 'q13', themeId: 'theme_2',
-    title: '새로운 취미의 문',
-    question: '배우고 싶은 취미 활동을 고를 때 내 마음을 끄는 쪽은?',
-    familyTopic: '가족 대화: "스릴 넘치는 암벽등반이나 서핑이 끌리나요, 차분한 다도나 수채화 그리기가 끌리나요?"',
-    optionA: { title: '한계를 시험하는 익스트림 스포츠', desc: '몸을 한계까지 몰아붙이며 두려움을 극복하는 성취감 (클라이밍, 서핑 등)', valueKey: 'adventure', emoji: '🧗' },
-    optionB: { title: '마음을 정돈하는 명상적 예술', desc: '손끝의 감각에 몰입하며 잡념을 비워내는 평화 (도예, 다도, 가드닝 등)', valueKey: 'peace', emoji: '🍵' }
+    title: '무인도 표류 시 내가 맡고 싶은 생존 역할',
+    question: '만약 가족들과 함께 무인도에 1주일간 고립된다면, 내가 솔선수범하고 싶은 역할은?',
+    familyTopic: '가족 대화: "무인도에 떨어지면 각자 어떤 역할을 제일 잘해낼 수 있을까요?"',
+    options: [
+      { text: '섬 곳곳을 정찰하며 식수원과 탈출 경로, 비상 식량을 탐색하는 수색 대장', valueKey: 'adventure', desc: '미지의 개척자' },
+      { text: '비바람을 막을 견고하고 안전한 은신처를 짓고 비상 물자를 관리하는 기지 관리자', valueKey: 'security', desc: '안전망 구축자' },
+      { text: '나무와 돌을 정교하게 깎아 낚싯바늘, 불 피우개, 칼 등 도구를 정밀 제작하는 기술자', valueKey: 'mastery', desc: '도구와 기술의 장인' },
+      { text: '두려움에 떠는 가족들을 위로하고 재미있는 유머로 캠프파이어 분위기를 띄우는 분위기 메이커', valueKey: 'playfulness', desc: '희망과 긍정의 에너자이저' }
+    ]
   },
   {
     id: 'q14', themeId: 'theme_2',
-    title: '대화의 결',
-    question: '사람들과 어울릴 때 어떤 대화가 나를 두근거리게 하나요?',
-    familyTopic: '가족 대화: "세상을 뒤흔들 기상천외한 아이디어를 나눌 때 신나나요, 편안한 일상의 온기를 나눌 때 따뜻한가요?"',
-    optionA: { title: '기상천외한 혁신과 미래에 대한 격론', desc: '"세상을 바꿀 미친 아이디어"를 밤새 주고받으며 눈이 반짝이는 대화', valueKey: 'adventure', emoji: '💡' },
-    optionB: { title: '서로의 마음에 공감하는 다정한 담소', desc: '평가나 경쟁 없이 오늘 하루 느낀 따뜻한 감정과 소소한 감사를 나누는 대화', valueKey: 'peace', emoji: '☕' }
+    title: '오래된 습관을 바꿀 때의 동기부여',
+    question: '운동이나 건강한 식습관을 결심했을 때 나를 끝까지 포기하지 않게 만드는 원동력은?',
+    familyTopic: '가족 대화: "작심삼일을 넘어서 습관을 지키게 해주는 나만의 힘은 무엇인가요?"',
+    options: [
+      { text: '스마트워치에 찍히는 수치, 체지방 감소율 등 눈에 보이는 구체적 데이터 성과', valueKey: 'impact', desc: '정량적 성과 확인' },
+      { text: '누가 시켜서가 아니라 내가 내 몸의 주인이 되어 통제하고 있다는 자존감', valueKey: 'autonomy', desc: '자기통제감' },
+      { text: '동작 하나하나의 정확한 메커니즘을 배우고 완벽한 폼을 익혀가는 숙련의 기쁨', valueKey: 'mastery', desc: '기예의 연마' },
+      { text: '가족들과 함께 목표를 정하고 매일 서로를 응원하며 함께 뛰는 연대감', valueKey: 'connection', desc: '함께하는 유대' }
+    ]
   },
   {
     id: 'q15', themeId: 'theme_2',
-    title: '인생의 파도타기',
-    question: '내 인생이 한 편의 영화라면 어떤 장르이길 바라나요?',
-    familyTopic: '가족 대화: "반전과 모험이 넘치는 어드벤처 영화가 좋나요, 마음이 몽글몽글해지는 잔잔한 힐링 영화가 좋나요?"',
-    optionA: { title: '블록버스터 어드벤처 서사시', desc: '수많은 위기와 반전을 극복하고 마침내 신대륙을 발견하는 영웅의 여정', valueKey: 'adventure', emoji: '🎬' },
-    optionB: { title: '따뜻한 감동의 리틀 포레스트', desc: '계절의 변화를 음미하며 텃밭의 작물을 가꾸고 맑은 미소를 짓는 힐링 영화', valueKey: 'peace', emoji: '🌱' }
+    title: '불공정한 상황을 목격했을 때',
+    question: '공공장소나 학교/직장에서 약자가 부당한 대우를 받는 상황을 보았을 때 나의 본능은?',
+    familyTopic: '가족 대화: "주변에서 억울한 일을 당하는 사람을 보면 어떤 마음이 드나요?"',
+    options: [
+      { text: '불이익을 감수하더라도 즉시 개입하여 부당함을 지적하고 약자를 보호한다.', valueKey: 'altruism', desc: '용기 있는 의협심' },
+      { text: '감정적으로 흥분하기보다 규정과 매뉴얼, 합법적 절차를 찾아 체계적으로 문제를 시정한다.', valueKey: 'security', desc: '이성적 질서 회복' },
+      { text: '상황의 전말을 정확히 파악하기 위해 양측의 주장을 냉정하게 분석하고 본질을 규명한다.', valueKey: 'curiosity', desc: '진실 규명과 공정성' },
+      { text: '피해자의 마음을 먼저 보듬고 다독이며 정서적인 치유와 안정을 돕는다.', valueKey: 'connection', desc: '공감과 따뜻한 위로' }
+    ]
   },
   {
     id: 'q16', themeId: 'theme_2',
-    title: '자극의 적정선',
-    question: '지루함과 스트레스 중 나에게 더 치명적인 것은?',
-    familyTopic: '가족 대화: "너무 심심해서 미칠 것 같은 게 더 괴롭나요, 너무 바쁘고 복잡해서 머리 터질 것 같은 게 더 괴롭나요?"',
-    optionA: { title: '변화 없는 정체와 지루함', desc: '아무런 자극 없이 매일 똑같이 굴러가는 삶은 내 영혼을 질식시킨다', valueKey: 'adventure', emoji: '🥱' },
-    optionB: { title: '과도한 소음과 지속적인 긴장', desc: '쉴 틈 없이 쫓기는 소음과 갈등은 내 정신과 몸을 갉아먹는다', valueKey: 'peace', emoji: '🤯' }
+    title: '새로운 기술/도구(AI 등)의 격변기',
+    question: '세상을 뒤흔드는 인공지능이나 신기술이 쏟아져 나올 때 당신의 첫 번째 태도는?',
+    familyTopic: '가족 대화: "AI 같은 신기술이 나오면 무섭나요, 신기한가요, 빨리 써보고 싶나요?"',
+    options: [
+      { text: '이 기술의 수학적 원리와 알고리즘 메커니즘이 어떻게 작동하는지 원리를 파고든다.', valueKey: 'curiosity', desc: '원리의 탐구' },
+      { text: '이 기술을 도구 삼아 남들보다 빠르게 새로운 비즈니스나 콘텐츠를 만들어낸다.', valueKey: 'impact', desc: '실전 응용과 창출' },
+      { text: '기술이 가져올 인간 소외나 일자리 위협을 경계하고 윤리적 보완책을 고민한다.', valueKey: 'altruism', desc: '인간적 가치 수호' },
+      { text: '신기한 프롬프트를 넣어 웃긴 그림이나 음악을 만들며 장난감처럼 가지고 논다.', valueKey: 'playfulness', desc: '유쾌한 놀이적 접근' }
+    ]
   },
   {
     id: 'q17', themeId: 'theme_2',
-    title: '주말의 풍경',
-    question: '주말 이틀이 주어졌을 때 가장 가슴이 충전되는 일정은?',
-    familyTopic: '가족 대화: "주말에 안 가본 핫플레이스나 축제를 찾아가는 게 좋나요, 집에서 뒹굴거리며 낮잠 자는 게 좋나요?"',
-    optionA: { title: '처음 가보는 낯선 도시의 활기찬 축제', desc: '거리의 소음과 이국적인 맛, 새로운 사람들을 접하며 감각을 깨우기', valueKey: 'adventure', emoji: '🎪' },
-    optionB: { title: '새소리만 들리는 조용한 숲속 북스테이', desc: '휴대폰을 꺼두고 따뜻한 이불 속에서 낮잠과 독서에 푹 빠지기', valueKey: 'peace', emoji: '📖' }
+    title: '오래된 물건이 고장 났을 때',
+    question: '정든 자전거나 가전제품이 고장 났을 때 당신이 먼저 취하는 행동은?',
+    familyTopic: '가족 대화: "집에 있는 물건이 망가지면 새로 사나요, 뜯어서 고쳐보나요?"',
+    options: [
+      { text: '유튜브와 부품 매뉴얼을 찾아 공구를 들고 직접 분해하여 원인을 고쳐낸다.', valueKey: 'mastery', desc: '직접 수리하는 손맛' },
+      { text: '안전을 위해 공인 서비스 센터에 맡겨 전문가에게 완벽한 점검을 받는다.', valueKey: 'security', desc: '신뢰할 수 있는 안전' },
+      { text: '고치는 김에 내 취향에 맞게 색칠하고 부품을 개조하여 나만의 커스텀 모델로 바꾼다.', valueKey: 'autonomy', desc: '창의적 자기표현' },
+      { text: '수명이 다했다면 폐기물 처리를 친환경적으로 하고 재활용할 방법을 찾는다.', valueKey: 'altruism', desc: '생태적 책임감' }
+    ]
   },
   {
     id: 'q18', themeId: 'theme_2',
-    title: '인간관계의 폭과 깊이',
-    question: '나를 더 행복하게 만드는 사람들과의 관계 맺기는?',
-    familyTopic: '가족 대화: "새로운 사람들을 많이 사귀는 파티가 좋나요, 가장 편한 몇 명만 만나는 자리가 좋나요?"',
-    optionA: { title: '다양한 분야 사람들과의 다채로운 교류', desc: '새로운 영감을 주는 각계각층의 사람들을 만나며 세계관을 넓히기', valueKey: 'adventure', emoji: '🌐' },
-    optionB: { title: '서로를 온전히 아는 소수의 깊은 우정', desc: '말하지 않아도 눈빛만으로 통하는 진실한 몇 사람과의 온전한 교감', valueKey: 'peace', emoji: '🕯️' }
+    title: '의견 대립으로 논쟁이 격해질 때',
+    question: '중요한 문제로 타인과 첨예하게 부딪힐 때 당신이 가장 지키고 싶은 가치는?',
+    familyTopic: '가족 대화: "말다툼이 생겼을 때 이기는 게 중요한가요, 관계를 지키는 게 중요한가요?"',
+    options: [
+      { text: '논쟁의 승패보다 상대방의 감정이 다치지 않고 관계의 신뢰가 유지되는 것', valueKey: 'connection', desc: '관계의 지속성' },
+      { text: '기분은 상할지라도 논리적 사실과 진실에 기반한 명확한 결론을 도출하는 것', valueKey: 'curiosity', desc: '객관적 진실' },
+      { text: '서로의 주장을 절충하여 실질적으로 실행 가능한 타협안을 빠르게 찾는 것', valueKey: 'impact', desc: '실용적 문제 해결' },
+      { text: '어느 한쪽의 강요 없이 각자의 고유한 생각과 다양성을 인정하고 존중하는 것', valueKey: 'autonomy', desc: '다양성과 자율성' }
+    ]
   },
   {
     id: 'q19', themeId: 'theme_2',
-    title: '위기 대처 방식',
-    question: '예상치 못한 돌발 상황이 닥쳤을 때 내 첫 반응은?',
-    familyTopic: '가족 대화: "계획이 틀어지면 오히려 짜릿한 승부욕이 생기나요, 일단 심호흡하고 마음을 가라앉히나요?"',
-    optionA: { title: '"재밌겠는데? 한번 부딪혀보자!"', desc: '위기를 오히려 기회로 보고 전투력을 불태우며 돌파구를 찾는 본능', valueKey: 'adventure', emoji: '🥊' },
-    optionB: { title: '"차분하게 마음부터 가라앉히자"', desc: '흥분을 가라앉히고 불필요한 피해를 막으며 평정심을 지켜내는 본능', valueKey: 'peace', emoji: '🧘' }
+    title: '인생의 중대한 변곡점(퇴직, 전학, 이직 등)',
+    question: '기존의 익숙한 울타리를 떠나 새로운 환경에 설 때, 당신의 마음을 채우는 생각은?',
+    familyTopic: '가족 대화: "새로운 학교나 직장으로 옮길 때 두려움과 설렘 중 어떤 감정이 더 큰가요?"',
+    options: [
+      { text: '드디어 타인의 간섭 없이 내가 진짜 원했던 삶의 방식을 실험할 자유가 생겼다!', valueKey: 'autonomy', desc: '새로운 자유의 시작' },
+      { text: '새로운 사람들을 만나고 미지의 세계를 탐험할 수 있다는 두근거림!', valueKey: 'adventure', desc: '모험에 대한 기대' },
+      { text: '그동안 쉼 없이 달려온 몸과 마음을 고요히 비우고 리셋할 수 있는 쉼의 선물!', valueKey: 'peace', desc: '비움과 치유의 기회' },
+      { text: '가족들이 불안해하지 않도록 든든한 일상 리듬과 경제적 방파제를 먼저 세우자!', valueKey: 'security', desc: '가족의 안위 우선' }
+    ]
   },
   {
     id: 'q20', themeId: 'theme_2',
-    title: '꿈꾸는 은퇴/휴식기',
-    question: '모든 의무를 마친 후 내가 보내고 싶은 완벽한 하루는?',
-    familyTopic: '가족 대화: "나이 들어서 세계 일주 크루즈를 타고 싶나요, 아담한 정원이 있는 시골집에서 살고 싶나요?"',
-    optionA: { title: '끝없는 세계 일주와 새로운 도전', desc: '지구 구석구석을 누비며 끊임없이 신기한 경험을 채워 넣는 삶', valueKey: 'adventure', emoji: '🚢' },
-    optionB: { title: '계절의 꽃을 가꾸는 정원사의 일상', desc: '아침 이슬을 맞으며 꽃에 물을 주고 저녁노을을 바라보며 미소 짓는 삶', valueKey: 'peace', emoji: '🌸' }
+    title: '체력과 기운이 바닥났을 때 (번아웃 순간)',
+    question: '모든 에너지가 소진되어 번아웃이 왔을 때, 나를 회복시키는 최고의 특효약은?',
+    familyTopic: '가족 대화: "몸과 마음이 너무 힘들 때 어떻게 해야 힘이 다시 날까요?"',
+    options: [
+      { text: '숲이나 바닷가 조용한 곳에 가서 온종일 아무 생각 없이 물멍·숲멍 때리기', valueKey: 'peace', desc: '자연 속 깊은 침묵' },
+      { text: '따뜻한 집밥을 먹고 가족들의 손을 잡으며 포근한 온기를 느끼기', valueKey: 'connection', desc: '가족의 무조건적 사랑' },
+      { text: '배꼽 잡고 웃을 수 있는 코미디 영화를 보거나 좋아하는 장난감 만지작거리기', valueKey: 'playfulness', desc: '동심과 웃음의 처방' },
+      { text: '혼자 호텔이나 서재에 틀어박혀 누구의 연락도 받지 않고 온전한 고독 누리기', valueKey: 'autonomy', desc: '단절을 통한 에너지 충전' }
+    ]
   },
 
-  // --- 테마 3: 성취와 공헌 (Q21 ~ Q30) ---
+  // --- 테마 3: 인간관계와 세상과의 연결 (Q21 ~ Q30) ---
   {
     id: 'q21', themeId: 'theme_3',
-    title: '성공의 정의',
-    question: '나에게 가장 커다란 환희를 안겨주는 성공의 순간은?',
-    familyTopic: '가족 대화: "남들이 부러워할 만한 최고의 실력을 인정받을 때가 좋을까요, 어려운 사람의 삶을 바꿔주었을 때가 좋을까요?"',
-    optionA: { title: '독보적 탁월함과 실력의 증명', desc: '내 분야에서 최고 수준의 경지에 도달하여 아무도 흉내 낼 수 없는 결과물을 냄', valueKey: 'mastery', emoji: '🏆' },
-    optionB: { title: '누군가의 눈물을 닦아준 선한 영향력', desc: '내 작은 손길로 인해 절망하던 이가 다시 희망을 품고 일어서는 모습을 봄', valueKey: 'altruism', emoji: '🤲' }
+    title: '마을 축제나 학교 바자회 기획',
+    question: '우리 동네나 학교에서 큰 축제를 연다면, 당신이 직접 맡고 싶은 부스는?',
+    familyTopic: '가족 대화: "축제에서 부스를 연다면 무엇을 만들어 사람들에게 보여주고 싶나요?"',
+    options: [
+      { text: '수익금 전액을 동물 보호 단체에 기부하는 유기견 후원 벼룩시장', valueKey: 'altruism', desc: '선한 기부 부스' },
+      { text: '직접 제작한 목공예품, 가죽 소품, 정밀 드로잉 작품을 전시 판매하는 장인 공방', valueKey: 'mastery', desc: '품격 있는 창작 부스' },
+      { text: '물풍선 던지기, 림보 게임, 얼굴 페이스페인팅으로 아이들을 까르르 웃기는 놀이존', valueKey: 'playfulness', desc: '웃음 가득한 유희존' },
+      { text: '마을의 역사 사진전과 주민들의 숨은 옛날이야기를 기록해 보여주는 아카이브관', valueKey: 'curiosity', desc: '기록과 인문학관' }
+    ]
   },
   {
     id: 'q22', themeId: 'theme_3',
-    title: '타인의 칭찬',
-    question: '가장 내 가슴을 뭉클하게 만드는 찬사의 문장은?',
-    familyTopic: '가족 대화: ""너 진짜 천재다, 엄청 대단해!"라는 칭찬이 좋나요, "너 덕분에 내가 살았어, 정말 고마워"라는 말이 좋나요?"',
-    optionA: { title: '"당신은 이 분야의 독보적인 거장입니다"', desc: '나의 피나는 노력과 정교한 전문성이 세상의 인정을 받는 순간', valueKey: 'mastery', emoji: '⭐' },
-    optionB: { title: '"당신 덕분에 내 삶이 따뜻해졌습니다"', desc: '나라는 존재가 누군가의 마음에 깊은 위로와 사랑이 되었음을 확인하는 순간', valueKey: 'altruism', emoji: '❤️' }
+    title: '친구/자녀가 깊은 고민을 털어놓을 때',
+    question: '소중한 사람이 눈물을 글썽이며 인생의 고민을 털어놓을 때 당신의 반응 방식은?',
+    familyTopic: '가족 대화: "힘든 일이 있을 때 어떤 위로를 받는 것이 가장 힘이 되나요?"',
+    options: [
+      { text: '어떤 판단이나 조언도 하지 않고 끝까지 눈을 맞추며 가슴으로 온전히 들어준다.', valueKey: 'connection', desc: '공감과 경청' },
+      { text: '고민의 본질적 원인을 냉정하게 분석하고 현실적으로 해결 가능한 로드맵을 짜준다.', valueKey: 'impact', desc: '실질적 문제 해결' },
+      { text: '"네 인생의 주인은 너야, 남들의 시선에 얽매이지 마"라며 자율적 용기를 북돋운다.', valueKey: 'autonomy', desc: '주체성 고취' },
+      { text: '맛있는 간식을 사주고 기분 전환할 수 있는 유쾌한 장소로 데려가 웃게 해준다.', valueKey: 'playfulness', desc: '기분 전환과 유쾌함' }
+    ]
   },
   {
     id: 'q23', themeId: 'theme_3',
-    title: '시간 투자의 우선순위',
-    question: '주말 10시간의 여유가 생겼을 때 내가 선택할 프로젝트는?',
-    familyTopic: '가족 대화: "내 개인 기술이나 악기를 완벽하게 연습하는 게 좋나요, 유기견 봉사나 이웃 돕기를 하러 가는 게 좋나요?"',
-    optionA: { title: '개인 역량의 극한 연마 (Deep Work)', desc: '단 하나의 기술이나 학문을 장인처럼 집요하게 갈고닦는 10시간', valueKey: 'mastery', emoji: '🎻' },
-    optionB: { title: '이웃과 사회를 위한 나눔 봉사', desc: '도움이 필요한 곳을 찾아가 땀 흘려 따뜻한 온기를 나누는 10시간', valueKey: 'altruism', emoji: '🤝' }
+    title: '가족 회의의 주제 선정',
+    question: '주말 저녁, 온 가족이 둘러앉아 한 가지 주제로 토론한다면 어떤 대화를 나누고 싶나요?',
+    familyTopic: '가족 대화: "우리 가족이 다 함께 깊이 이야기 나눠보고 싶은 주제는 무엇인가요?"',
+    options: [
+      { text: '"우리가 10년 뒤 어떤 사람으로 살아가고 있을까?" 각자의 미래 꿈과 가치관 나눔', valueKey: 'curiosity', desc: '존재와 미래의 사유' },
+      { text: '"우리 가족의 소비와 저축 규칙을 어떻게 세울까?" 실질적인 가계 경제 운영안', valueKey: 'security', desc: '가족의 경제적 자립' },
+      { text: '"올해 방학/휴가 때 어디로 모험을 떠날까?" 버킷리스트 여행 계획 세우기', valueKey: 'adventure', desc: '설레는 여정 기획' },
+      { text: '"요즘 서로에게 서운했거나 고마웠던 점 나누기" 감정의 매듭을 풀고 안아주기', valueKey: 'connection', desc: '정서적 교감과 화해' }
+    ]
   },
   {
     id: 'q24', themeId: 'theme_3',
-    title: '기억되는 방식',
-    question: '먼 훗날 나의 묘비에 새겨지고 싶은 단 하나의 수식어는?',
-    familyTopic: '가족 대화: ""완벽한 작품을 남긴 위대한 장인"으로 기억될까요, "세상에 사랑을 베풀고 간 따뜻한 사람"으로 기억될까요?"',
-    optionA: { title: '타협하지 않은 완벽주의 장인', desc: '자신의 기준을 한 번도 낮추지 않고 최고의 품질을 세상에 남긴 사람', valueKey: 'mastery', emoji: '🗿' },
-    optionB: { title: '조건 없는 사랑을 베푼 은인', desc: '자신의 이익보다 이웃의 행복을 먼저 생각하며 따뜻하게 품어준 사람', valueKey: 'altruism', emoji: '🕊️' }
+    title: '내가 가장 존경하는 리더의 스타일',
+    question: '내가 마음 깊이 따르고 닮고 싶은 리더의 모습은?',
+    familyTopic: '가족 대화: "어떤 리더를 만났을 때 가장 믿음이 가고 따르고 싶어지나요?"',
+    options: [
+      { text: '자신의 기술과 전문성이 압도적이어서 실력 하나만으로 모두를 감탄시키는 리더', valueKey: 'mastery', desc: '실력 기반의 카리스마' },
+      { text: '구성원 각자에게 전적인 권한을 위임하고 간섭 없이 성장을 지켜봐 주는 리더', valueKey: 'autonomy', desc: '자율성을 보장하는 리더' },
+      { text: '가장 궂은일에 앞장서고 약자를 먼저 챙기며 헌신하는 서번트(하인)형 리더', valueKey: 'altruism', desc: '헌신과 희생의 리더' },
+      { text: '탁월한 비전과 추진력으로 불가능해 보이던 목표를 기어코 달성해내는 승부사 리더', valueKey: 'impact', desc: '승리와 성취의 리더' }
+    ]
   },
   {
     id: 'q25', themeId: 'theme_3',
-    title: '경쟁과 협력',
-    question: '나의 잠재력을 가장 극대화해 주는 상황은?',
-    familyTopic: '가족 대화: "강력한 라이벌과 경쟁할 때 실력이 쑥쑥 크나요, 서로 밀어주고 끌어주는 협력 속에서 힘이 나나요?"',
-    optionA: { title: '정상에 오르기 위한 선의의 치열한 경쟁', desc: '강력한 라이벌과 기준 높은 환경이 내 숨은 한계를 깨부수어 줌', valueKey: 'mastery', emoji: '⚡' },
-    optionB: { title: '누구도 낙오시키지 않는 따뜻한 연대', desc: '서로의 약점을 보완하고 손을 맞잡을 때 기적 같은 시너지가 발휘됨', valueKey: 'altruism', emoji: '🤗' }
+    title: '선물을 고르는 마음',
+    question: '소중한 사람의 생일 선물을 준비할 때 당신이 가장 신경 쓰는 부분은?',
+    familyTopic: '가족 대화: "누군가에게 선물을 줄 때 어떤 기준으로 고르나요?"',
+    options: [
+      { text: '그 사람에게 당장 가장 필요하고 실생활에서 요긴하게 쓰일 실용적인 물건', valueKey: 'security', desc: '실용성과 배려' },
+      { text: '상대방의 취향을 깊이 관찰하여 내 손으로 직접 만들거나 특별 각인한 맞춤 작품', valueKey: 'mastery', desc: '정성과 완성도' },
+      { text: '선물 상자를 열었을 때 깜짝 놀라며 박장대소할 수 있는 기발하고 재미있는 선물', valueKey: 'playfulness', desc: '서프라이즈와 웃음' },
+      { text: '선물과 함께 전하는 진심 어린 손편지와 둘만의 소중한 추억을 담은 앨범', valueKey: 'connection', desc: '마음의 온도와 정서' }
+    ]
   },
   {
     id: 'q26', themeId: 'theme_3',
-    title: '책장 속의 영웅',
-    question: '위인전을 읽을 때 내 심장을 더 뜨겁게 만든 인물은?',
-    familyTopic: '가족 대화: "스티브 잡스나 레오나르도 다빈치처럼 완벽한 천재가 멋지나요, 이태석 신부나 테레사 수녀처럼 헌신한 분이 멋지나요?"',
-    optionA: { title: '압도적 기량을 가진 혁신가 / 예술가', desc: '기존의 한계를 뛰어넘어 인류 문명의 수준을 끌어올린 천재들', valueKey: 'mastery', emoji: '🔭' },
-    optionB: { title: '자신을 바쳐 타인을 구한 박애주의자', desc: '고통받는 이들의 곁을 지키며 인류애의 숭고함을 보여준 성자들', valueKey: 'altruism', emoji: '🕯️' }
+    title: '자녀 교육에서 가장 물려주고 싶은 자산',
+    question: '부모로서(또는 미래에) 아이들에게 꼭 남겨주고 싶은 가장 위대한 가치는?',
+    familyTopic: '가족 대화: "부모님이 나에게 가르쳐준 것 중 가장 소중한 가치는 무엇인가요?"',
+    options: [
+      { text: '남의 눈치 보지 않고 스스로 결정하고 책임지는 단단한 주체성', valueKey: 'autonomy', desc: '독립적인 자아' },
+      { text: '타인의 고통을 외면하지 않고 따뜻하게 손 내밀 줄 아는 다정한 공감 능력', valueKey: 'altruism', desc: '선한 인성과 배려' },
+      { text: '어떤 분야든 끈기 있게 파고들어 최고의 실력을 빚어내는 장인 정신', valueKey: 'mastery', desc: '탁월한 역량과 근성' },
+      { text: '어떤 시련 속에서도 유머를 잃지 않고 삶을 즐길 줄 아는 유쾌한 태도', valueKey: 'playfulness', desc: '행복을 누리는 동심' }
+    ]
   },
   {
     id: 'q27', themeId: 'theme_3',
-    title: '돈을 쓰는 가장 큰 기쁨',
-    question: '생각지 못한 1억 원의 상금이 주어졌을 때 가장 가슴 벅찬 용처는?',
-    familyTopic: '가족 대화: "나만의 최고급 장비나 연구실을 만드는 게 좋을까요, 도움이 절실한 곳에 기부하는 게 좋을까요?"',
-    optionA: { title: '최고의 작업실과 장비 구축', desc: '내 꿈을 완벽하게 구현할 최고급 연구실/작업 공간에 투자하기', valueKey: 'mastery', emoji: '🛠️' },
-    optionB: { title: '어려운 이웃을 살리는 기부와 장학금', desc: '꿈을 포기하려던 아이들에게 희망의 사다리를 놓아주기', valueKey: 'altruism', emoji: '🎁' }
+    title: '칭찬을 받을 때 가장 뿌듯한 말',
+    question: '주변 사람들에게 들었을 때 가장 가슴이 저릿할 정도로 보람찬 칭찬은?',
+    familyTopic: '가족 대화: "어떤 말을 들었을 때 가장 인정받는 기분이 드나요?"',
+    options: [
+      { text: '"당신과 함께 일하면 마음이 너무 편안하고 든든합니다."', valueKey: 'security', desc: '신뢰와 안정감' },
+      { text: '"당신의 독창적인 아이디어는 정말 그 누구도 흉내 낼 수 없어요."', valueKey: 'autonomy', desc: '독창성과 차별성' },
+      { text: '"당신 덕분에 많은 사람들의 삶이 실질적으로 나아졌습니다."', valueKey: 'impact', desc: '사회적 임팩트' },
+      { text: '"당신을 만나면 늘 웃음이 터지고 하루가 유쾌해집니다."', valueKey: 'playfulness', desc: '밝은 에너지' }
+    ]
   },
   {
     id: 'q28', themeId: 'theme_3',
-    title: '가르침의 방식',
-    question: '자녀나 후배에게 삶의 지혜를 전수할 때 강조하고 싶은 핵심은?',
-    familyTopic: '가족 대화: ""어디서든 최고가 되어라"라고 가르치고 싶나요, "어디서든 약자를 배려하는 사람이 되어라"라고 가르치고 싶나요?"',
-    optionA: { title: '"타협하지 말고 최고의 전문성을 갖추어라"', desc: '실력이 있어야 비로소 세상에 당당하게 제 목소리를 낼 수 있다', valueKey: 'mastery', emoji: '🎯' },
-    optionB: { title: '"타인의 아픔에 공감할 줄 아는 온기를 품어라"', desc: '아무리 능력이 뛰어나도 따뜻한 인성이 없으면 괴물이 될 뿐이다', valueKey: 'altruism', emoji: '🌱' }
+    title: '공동체 속에서 나의 존재 방식',
+    question: '어떤 조직이나 무리 안에서 내가 느낄 때 가장 편안한 포지션은?',
+    familyTopic: '가족 대화: "무리 안에서 나서는 게 편한가요, 묵묵히 돕는 게 편한가요?"',
+    options: [
+      { text: '맨 앞에서 방향을 가리키고 구성원들을 이끌어 성과를 내는 선봉장', valueKey: 'impact', desc: '추진력 있는 리더' },
+      { text: '보이지 않는 곳에서 시스템이 매끄럽게 돌아가도록 조율하는 살림꾼', valueKey: 'security', desc: '체계적인 조율자' },
+      { text: '기존의 틀에 얽매이지 않고 기발한 해결책을 던지는 자유로운 조언자', valueKey: 'autonomy', desc: '독립적 전략가' },
+      { text: '구성원들의 사기를 북돋우고 갈등을 웃음으로 중재하는 분위기 메이커', valueKey: 'playfulness', desc: '유화적인 촉매제' }
+    ]
   },
   {
     id: 'q29', themeId: 'theme_3',
-    title: '갈등의 딜레마',
-    question: '완벽한 결과물을 위해 동료를 엄격하게 몰아붙여야 한다면?',
-    familyTopic: '가족 대화: "결과물이 완벽해진다면 사람들에게 엄격해도 될까요, 결과물이 조금 떨어져도 사람 마음을 다치게 하지 않는 게 우선일까요?"',
-    optionA: { title: '결과의 완벽성을 위해 기준을 엄격히 고수한다', desc: '순간의 서운함은 지나가지만, 부실한 결과물은 영원히 오점으로 남는다', valueKey: 'mastery', emoji: '📐' },
-    optionB: { title: '완벽성을 조금 양보하더라도 사람의 마음을 지킨다', desc: '아무리 위대한 성과도 사람의 마음에 상처를 주면서까지 얻을 가치는 없다', valueKey: 'altruism', emoji: '🫂' }
+    title: '약속과 시간 엄수',
+    question: '약속 시간을 지키는 것에 대한 나의 솔직한 내면 기준은?',
+    familyTopic: '가족 대화: "약속 시간보다 일찍 가는 편인가요, 시간에 구애받지 않는 편인가요?"',
+    options: [
+      { text: '상대방에 대한 기본적인 예의이자 신뢰의 척도이므로 10분 전에 도착한다.', valueKey: 'security', desc: '철저한 신의 성실' },
+      { text: '시간에 너무 얽매이기보다 그 만남에서 어떤 깊은 대화를 나눌지가 더 중요하다.', valueKey: 'connection', desc: '내용과 교감 중심' },
+      { text: '효율적인 시간 관리가 성공의 핵심이므로 분 단위로 스케줄을 최적화한다.', valueKey: 'impact', desc: '효율성과 생산성' },
+      { text: '정해진 틀에 너무 얽매이지 않고 흐름에 맡기는 유연한 약속을 선호한다.', valueKey: 'peace', desc: '자연스러운 흐름' }
+    ]
   },
   {
     id: 'q30', themeId: 'theme_3',
-    title: '인생의 보람',
-    question: '내가 세상을 떠날 때 지구에 무엇을 남기고 싶나요?',
-    familyTopic: '가족 대화: "역사에 남을 명작이나 기술을 남기고 싶나요, 나를 사랑했던 사람들의 따뜻한 미소를 남기고 싶나요?"',
-    optionA: { title: '후대에 길이 남을 불멸의 걸작이나 이론', desc: '시대를 초월하여 인류에게 영감을 줄 지적/예술적 유산', valueKey: 'mastery', emoji: '🏛️' },
-    optionB: { title: '이 세상의 고통을 조금이라도 줄였다는 안도감', desc: '내가 살았기 때문에 단 한 사람이라도 더 숨쉬기 편해졌다는 위안', valueKey: 'altruism', emoji: '🌍' }
+    title: '사회적 기부의 방식',
+    question: '만약 정기적으로 사회에 기부한다면 어떤 방식으로 참여하고 싶나요?',
+    familyTopic: '가족 대화: "사회에 기여한다면 돈, 재능, 노동, 환경 중 무엇으로 하고 싶나요?"',
+    options: [
+      { text: '내 전문 분야의 지식과 기술을 무료로 청소년들에게 가르쳐주는 재능 기부', valueKey: 'mastery', desc: '전문 기술 나눔' },
+      { text: '도움이 꼭 필요한 결식아동이나 독거노인에게 매달 직접 도시락을 배달하는 현장 봉사', valueKey: 'altruism', desc: '직접적인 헌신' },
+      { text: '혁신적인 아이디어로 사회 문제를 해결하는 소셜 벤처에 투자하는 임팩트 금융', valueKey: 'impact', desc: '시스템적 변화 투자' },
+      { text: '우리 동네 숲과 하천을 가꾸고 쓰레기를 줍는 환경 정화 생태 활동', valueKey: 'peace', desc: '자연 생태 수호' }
+    ]
   },
 
-  // --- 테마 4: 지적 탐구와 창작 (Q31 ~ Q40) ---
+  // --- 테마 4: 지적 호기심과 창작의 열망 (Q31 ~ Q40) ---
   {
     id: 'q31', themeId: 'theme_4',
-    title: '지적 갈증의 대상',
-    question: '나의 뇌세포를 가장 짜릿하게 만드는 배움의 순간은?',
-    familyTopic: '가족 대화: "우주의 비밀이나 철학 질문을 파고들 때 재밌나요, 배운 걸로 실제로 쓸모 있는 무언가를 뚝딱 만들 때 재밌나요?"',
-    optionA: { title: '세상의 근본 원리를 이해하는 순간', desc: '실용성과 무관하게 "왜 그럴까?"에 대한 진리의 퍼즐이 맞춰지는 희열', valueKey: 'curiosity', emoji: '🌌' },
-    optionB: { title: '내 손으로 세상에 없는 물건을 만든 순간', desc: '아이디어가 현실의 제품, 비즈니스, 구체적인 물체로 탄생하는 희열', valueKey: 'impact', emoji: '💡' }
+    title: '평생 단 하나의 공부를 깊게 팔 수 있다면',
+    question: '아무런 시험이나 취업 목적 없이, 순수한 지적 기쁨을 위해 배운다면?',
+    familyTopic: '가족 대화: "시험 걱정 없이 마음껏 배울 수 있다면 무엇을 공부하고 싶나요?"',
+    options: [
+      { text: '우주의 기원과 양자역학, 블랙홀을 탐구하는 우주물리학', valueKey: 'curiosity', desc: '우주의 근본 탐구' },
+      { text: '인간의 마음과 무의식을 들여다보는 심리학과 뇌과학', valueKey: 'curiosity', desc: '내면과 의식 탐구' },
+      { text: '나무를 다듬어 예술 가구를 만드는 전통 목공예나 악기 제작', valueKey: 'mastery', desc: '손의 기예와 공예' },
+      { text: '미래 사회를 바꿀 인공지능 프로그래밍과 로봇 공학', valueKey: 'impact', desc: '첨단 기술 구현' }
+    ]
   },
   {
     id: 'q32', themeId: 'theme_4',
-    title: '도서관 vs 공방',
-    question: '나에게 하루 온종일의 자유가 주어진다면 어디로 향할까요?',
-    familyTopic: '가족 대화: "조용한 도서관에서 책을 잔뜩 쌓아두고 읽고 싶나요, 공방에서 공구를 들고 무언가를 만들고 싶나요?"',
-    optionA: { title: '천장까지 책이 가득한 고서 도서관', desc: '수백 년 전 석학들의 지혜를 넘나들며 끝없는 사유의 바다에 잠기기', valueKey: 'curiosity', emoji: '📚' },
-    optionB: { title: '최신 장비와 재료가 가득한 창작 메이커 스페이스', desc: '3D 프린터, 목공 공구, 레이저 커터로 상상을 실물로 깎아내기', valueKey: 'impact', emoji: '🔨' }
+    title: '글을 쓸 때 내 마음을 끄는 장르',
+    question: '내가 한 권의 책을 직접 출판한다면 어떤 장르의 저자가 되고 싶나요?',
+    familyTopic: '가족 대화: "책을 한 권 쓴다면 소설, 수필, 전문서, 동화 중 무엇을 쓰고 싶나요?"',
+    options: [
+      { text: '삶의 깊은 사색과 계절의 변화를 담은 고요하고 따뜻한 철학 에세이', valueKey: 'peace', desc: '사색적 에세이' },
+      { text: '내 분야의 비법과 정수를 집대성하여 후배들에게 전수하는 전문 실무서', valueKey: 'mastery', desc: '전문 지식 바이블' },
+      { text: '아이들과 어른들의 상상력을 자극하는 유쾌하고 환상적인 동화나 웹툰', valueKey: 'playfulness', desc: '상상력 넘치는 동화' },
+      { text: '세상의 불합리한 모순을 고발하고 대안을 제시하는 사회 비평서', valueKey: 'altruism', desc: '세상을 바꾸는 외침' }
+    ]
   },
   {
     id: 'q33', themeId: 'theme_4',
-    title: '질문과 해답',
-    question: '나를 더 성숙하게 만드는 과정은 무엇인가요?',
-    familyTopic: '가족 대화: "정답 없는 깊은 질문을 던질 때 멋진가요, 현실의 복잡한 문제를 끝내 해결할 때 멋진가요?"',
-    optionA: { title: '본질을 찌르는 심오한 질문을 던지는 것', desc: '남들이 당연하게 여기는 것에 의문을 품고 생각의 지평을 넓히기', valueKey: 'curiosity', emoji: '❓' },
-    optionB: { title: '현실의 문제를 구체적으로 해결해 치우는 것', desc: '복잡한 탁상공론을 끝내고 실질적으로 돌아가는 시스템을 구축하기', valueKey: 'impact', emoji: '⚙️' }
+    title: '전시회나 박물관에 갔을 때',
+    question: '미술관이나 박물관에서 당신의 발길을 가장 오래 붙잡는 공간은?',
+    familyTopic: '가족 대화: "전시회에 가면 어떤 작품 앞에서 가장 오래 머무나요?"',
+    options: [
+      { text: '거장이 수천 번의 붓질로 완성한 압도적 기교의 고전 명화', valueKey: 'mastery', desc: '거장의 테크닉' },
+      { text: '수천 년 전 고대 문명의 유물과 그 시대 사람들의 삶을 복원한 역사실', valueKey: 'curiosity', desc: '고대 문명의 신비' },
+      { text: '관객이 직접 버튼을 누르고 만지며 체험하는 인터랙티브 미디어아트존', valueKey: 'playfulness', desc: '체험형 놀이 예술' },
+      { text: '아무 소리도 들리지 않고 오직 그림 하나와 나만 마주하는 명상 전시실', valueKey: 'peace', desc: '정적의 교감 공간' }
+    ]
   },
   {
     id: 'q34', themeId: 'theme_4',
-    title: '지식의 가치',
-    question: '내가 생각하는 진정한 지식의 쓸모는?',
-    familyTopic: '가족 대화: "지식은 그 자체로 영혼을 살찌우는 걸까요, 현실을 바꾸는 도구일 때 가치가 있는 걸까요?"',
-    optionA: { title: '무지를 깨닫고 세계관을 확장하는 경외감', desc: '내가 얼마나 작은 존재인지 깨닫고 우주와 인간을 깊이 이해하는 즐거움', valueKey: 'curiosity', emoji: '🔭' },
-    optionB: { title: '실질적인 변화를 이끌어내는 힘과 실행력', desc: '지식이 책 속에 갇히지 않고 사람들의 삶과 비즈니스를 개선하는 효용', valueKey: 'impact', emoji: '⚡' }
+    title: '취미로 악기나 노래를 배운다면',
+    question: '음악을 통해 내가 표현하고 싶은 가장 이상적인 순간은?',
+    familyTopic: '가족 대화: "악기를 연주할 수 있다면 어떤 음악을 들려주고 싶나요?"',
+    options: [
+      { text: '클래식 명곡의 한 악장을 악보 그대로 완벽하게 오차 없이 연주해내는 쾌감', valueKey: 'mastery', desc: '정교한 테크닉' },
+      { text: '정해진 악보 없이 그날의 기분대로 건반을 두드리며 즉흥 재즈를 연주하는 자유', valueKey: 'autonomy', desc: '자유로운 즉흥 표현' },
+      { text: '캠프파이어에 둘러앉아 통기타를 치며 가족들과 목청껏 노래 부르는 흥겨움', valueKey: 'connection', desc: '함께 부르는 노래' },
+      { text: '빗소리나 바람 소리에 어울리는 잔잔한 어쿠스틱 선율로 마음을 치유하기', valueKey: 'peace', desc: '치유의 멜로디' }
+    ]
   },
   {
     id: 'q35', themeId: 'theme_4',
-    title: '창작의 동기',
-    question: '무언가를 창작할 때 나를 가장 몰입하게 만드는 연료는?',
-    familyTopic: '가족 대화: "나 혼자만의 순수한 호기심과 재미로 만들 때가 좋나요, 많은 사람들이 열광하고 써줄 때가 좋나요?"',
-    optionA: { title: '나만의 순수한 호기심과 실험 정신', desc: '세상이 알아주지 않아도 내가 알고 싶고 시도해보고 싶은 미지의 탐색', valueKey: 'curiosity', emoji: '🧪' },
-    optionB: { title: '시장과 사람들의 뜨거운 반응과 피드백', desc: '많은 사람들이 내 결과물을 사용하고 실질적인 감동과 변화를 겪는 모습', valueKey: 'impact', emoji: '📣' }
+    title: '나만의 요리를 만들 때',
+    question: '주말에 가족이나 친구를 위해 주방에 섰을 때 당신의 요리 스타일은?',
+    familyTopic: '가족 대화: "요리할 때 정해진 레시피대로 하나요, 내 마음대로 창작하나요?"',
+    options: [
+      { text: '유명 셰프의 정통 레시피와 정량 계량을 엄격히 지켜 완벽한 맛을 재현하기', valueKey: 'mastery', desc: '정통 레시피의 완벽성' },
+      { text: '냉장고에 있는 재료를 활용해 세상에 없던 기상천외한 퓨전 요리를 창작하기', valueKey: 'autonomy', desc: '창의적 퓨전 요리' },
+      { text: '유기농 친환경 제철 식재료로 몸을 정화하는 건강 힐링 식단 차리기', valueKey: 'peace', desc: '자연주의 건강 식탁' },
+      { text: '음식을 예쁜 동물 모양으로 꾸미거나 깜짝 재미를 주는 파티 요리 만들기', valueKey: 'playfulness', desc: '눈이 즐거운 놀이 요리' }
+    ]
   },
   {
     id: 'q36', themeId: 'theme_4',
-    title: '예술과 디자인',
-    question: '어떤 예술 작품을 마주했을 때 더 가슴이 벅차오르나요?',
-    familyTopic: '가족 대화: "난해하지만 깊은 생각을 하게 만드는 미술품이 좋나요, 일상에서 너무 편리하고 아름다운 제품이 좋나요?"',
-    optionA: { title: '철학적 질문을 던지는 심오한 순수 예술', desc: '쉽게 이해되지 않지만 볼수록 묵직한 내면의 사유를 흔드는 작품', valueKey: 'curiosity', emoji: '🎨' },
-    optionB: { title: '수백만 명의 일상을 혁신한 미려한 디자인 제품', desc: '아름다움과 실용성이 완벽히 결합되어 세상의 표준을 바꾼 혁신', valueKey: 'impact', emoji: '📱' }
+    title: '창작의 벽에 부딪혔을 때 (아이디어가 안 떠오를 때)',
+    question: '글이나 기획, 그림 작업을 하다가 꽉 막혔을 때 돌파하는 나만의 방식은?',
+    familyTopic: '가족 대화: "생각이 꽉 막히면 어떻게 머리를 식히나요?"',
+    options: [
+      { text: '전혀 다른 분야의 역사나 과학 서적을 뒤적이며 엉뚱한 지적 영감을 찾는다.', valueKey: 'curiosity', desc: '이종 분야의 융합' },
+      { text: '모든 작업을 멈추고 신발을 신은 뒤 동네 한 바퀴를 빠르게 뛰거나 산책한다.', valueKey: 'adventure', desc: '신체 활동을 통한 환기' },
+      { text: '아이들과 뒹굴거리며 레고를 조립하거나 실없는 장난을 치며 뇌를 무장해제한다.', valueKey: 'playfulness', desc: '동심으로 뇌 리셋' },
+      { text: '선배 거장들의 명작 아카이브를 찬찬히 뜯어보며 기본기부터 다시 점검한다.', valueKey: 'mastery', desc: '기본기로 회귀' }
+    ]
   },
   {
     id: 'q37', themeId: 'theme_4',
-    title: '새로운 기술을 대하는 자세',
-    question: '인공지능(AI) 같은 신기술이 등장했을 때 나의 첫 충동은?',
-    familyTopic: '가족 대화: "그 기술의 수학적 원리나 철학적 의미가 먼저 궁금한가요, 이걸로 어떤 돈이나 앱을 만들 수 있을지가 먼저 떠오르나요?"',
-    optionA: { title: '"이 알고리즘은 대체 어떻게 의식을 모방하는 걸까?"', desc: '기저에 깔린 지능의 본질과 인간 존재의 의미를 파고드는 호기심', valueKey: 'curiosity', emoji: '🤖' },
-    optionB: { title: '"이걸 활용해서 당장 어떤 서비스를 런칭해볼까?"', desc: '기술을 무기 삼아 시장의 빈틈을 파고들고 가치를 창출하는 실행력', valueKey: 'impact', emoji: '🚀' }
+    title: '사진을 찍는 목적',
+    question: '카메라나 스마트폰을 들어 셔터를 누를 때 내가 담고 싶은 핵심은?',
+    familyTopic: '가족 대화: "사진 찍을 때 예쁜 풍경이 좋나요, 가족들의 웃는 표정이 좋나요?"',
+    options: [
+      { text: '가족들과 친구들의 자연스럽고 환하게 웃는 찰나의 표정', valueKey: 'connection', desc: '인간적 온기' },
+      { text: '빛과 그림자, 완벽한 구도와 노출이 빚어낸 한 편의 예술적 프레임', valueKey: 'mastery', desc: '미학적 완성도' },
+      { text: '지나가던 길고양이의 우스꽝스러운 자세나 재미있는 길거리 풍경', valueKey: 'playfulness', desc: '유머러스한 찰나' },
+      { text: '이른 아침 안개 낀 호수나 노을 지는 숲의 고요하고 장엄한 순간', valueKey: 'peace', desc: '자연의 숭고함' }
+    ]
   },
   {
     id: 'q38', themeId: 'theme_4',
-    title: '대화의 상대',
-    question: '단 한 명의 역사적 인물과 식사할 수 있다면 누구를 택할까요?',
-    familyTopic: '가족 대화: "우주의 비밀을 논하는 소크라테스나 아인슈타인이 좋나요, 현실을 뒤바꾼 벤저민 프랭클린이나 헨리 포드가 좋나요?"',
-    optionA: { title: '소크라테스나 아인슈타인 같은 사상가', desc: '인간의 한계를 넘어선 지적 통찰과 우주의 신비에 대해 밤샘 대화', valueKey: 'curiosity', emoji: '👴' },
-    optionB: { title: '거대한 산업과 제국을 일군 실천가', desc: '어떻게 비전을 현실로 옮기고 수많은 사람을 움직였는지 실행 전략 배우기', valueKey: 'impact', emoji: '👔' }
+    title: '영화/드라마의 감상 포인트',
+    question: '명작 영화를 보고 난 뒤 가장 오래 여운이 남는 요소는 무엇인가요?',
+    familyTopic: '가족 대화: "영화 보고 나서 대사가 기억나나요, 영상미가 기억나나요?"',
+    options: [
+      { text: '인간 실존과 사회에 대해 묵직한 화두를 던지는 심오한 주제 의식', valueKey: 'curiosity', desc: '철학적 메시지' },
+      { text: '감독의 치밀한 미장센, 카메라 워크, 배우들의 신들린 연기력', valueKey: 'mastery', desc: '예술적 완성도' },
+      { text: '보는 내내 배꼽을 잡고 웃게 만들거나 동심으로 돌아가게 해준 유쾌함', valueKey: 'playfulness', desc: '순수한 오락적 카타르시스' },
+      { text: '주인공들의 가슴 아픈 사랑과 갈등을 극복하는 헌신적인 유대감', valueKey: 'connection', desc: '감정적 카타르시스' }
+    ]
   },
   {
     id: 'q39', themeId: 'theme_4',
-    title: '취미 생활의 결실',
-    question: '취미 생활을 할 때 내가 가장 뿌듯한 엔딩은?',
-    familyTopic: '가족 대화: "취미를 통해 지식과 안목이 엄청 깊어지는 게 좋나요, 만든 결과물을 지인들에게 선물하거나 판매해보는 게 좋나요?"',
-    optionA: { title: '그 분야의 해박한 지식과 독보적 안목', desc: '아무도 보지 못하는 미세한 차이를 음미하고 식별할 수 있는 심미안', valueKey: 'curiosity', emoji: '🧐' },
-    optionB: { title: '실제로 완성하여 유용하게 쓰이는 작품', desc: '가족과 친구들이 감탄하며 실생활에서 요긴하게 사용하는 실물 결과물', valueKey: 'impact', emoji: '🎁' }
+    title: '나만의 수집품 (컬렉션)',
+    question: '만약 한 가지를 오랫동안 수집한다면 어떤 컬렉션을 만들고 싶나요?',
+    familyTopic: '가족 대화: "평생 하나를 모은다면 무엇을 모으고 싶나요?"',
+    options: [
+      { text: '세계 각국에서 수집한 고서적, 고지도, 역사적 사료', valueKey: 'curiosity', desc: '역사의 흔적' },
+      { text: '희귀한 원목 찻잔, 정밀 기계식 시계, 빈티지 만년필 등 장인들의 명품', valueKey: 'mastery', desc: '장인의 정수' },
+      { text: '추억의 빈티지 장난감, 레트로 레고 세트, 클래식 보드게임들', valueKey: 'playfulness', desc: '동심의 아카이브' },
+      { text: '길을 걷다 우연히 주운 독특한 형태의 조약돌, 솔방울, 말린 찻잎', valueKey: 'peace', desc: '자연의 소박한 선물' }
+    ]
   },
   {
     id: 'q40', themeId: 'theme_4',
-    title: '삶의 유산',
-    question: '다음 세대에 물려주고 싶은 나의 가장 소중한 자산은?',
-    familyTopic: '가족 대화: "세상을 경이롭게 바라보는 호기심의 눈동자를 물려줄까요, 거친 세상에서 무언가를 일궈내는 실행력을 물려줄까요?"',
-    optionA: { title: '평생 시들지 않는 경이감과 호기심의 눈', desc: '어떤 상황에서도 배움을 멈추지 않고 삶의 아름다움을 발견하는 영혼', valueKey: 'curiosity', emoji: '✨' },
-    optionB: { title: '맨땅에서 꽃을 피워내는 불굴의 실행력', desc: '생각에만 머물지 않고 현실을 변화시키며 성취를 일구는 행동력', valueKey: 'impact', emoji: '🏔️' }
+    title: '지식을 나누는 방식',
+    question: '내가 터득한 소중한 깨달음을 타인에게 전달할 때 가장 선호하는 방식은?',
+    familyTopic: '가족 대화: "내가 아는 것을 남에게 알려줄 때 어떤 방법이 가장 즐겁나요?"',
+    options: [
+      { text: '체계적인 강의 커리큘럼을 만들어 단계별로 완벽하게 전수하기', valueKey: 'mastery', desc: '체계적 아카데미' },
+      { text: '질문과 대화를 주고받으며 스스로 깨닫도록 돕는 소크라테스식 문답', valueKey: 'curiosity', desc: '자발적 성찰 유도' },
+      { text: '게임이나 퀴즈, 챌린지 형태로 재미있게 즐기며 저절로 체득하게 만들기', valueKey: 'playfulness', desc: '게이미피케이션' },
+      { text: '어려운 이웃이나 기회가 부족한 이들에게 무료 멘토링으로 전수하기', valueKey: 'altruism', desc: '기회의 나눔' }
+    ]
   },
 
-  // --- 테마 5: 놀이와 활력 (Q41 ~ Q50) ---
+  // --- 테마 5: 유희와 실존적 행복 (Q41 ~ Q50) ---
   {
     id: 'q41', themeId: 'theme_5',
-    title: '놀이의 본질 (호모 루덴스)',
-    question: '나에게 가장 완벽한 "놀이(Play)"의 감각은 어떤 것인가요?',
-    familyTopic: '가족 대화: "승패 없이 까르르 웃으며 마음대로 노는 게 좋나요, 규칙이 있고 아슬아슬하게 승부를 겨루는 게임이 좋나요?"',
-    optionA: { title: '규칙도 승패도 없는 순수한 무목적의 유희', desc: '어린아이처럼 모래성을 쌓고 부수며 아무 이유 없이 웃음 짓는 해방감', valueKey: 'free_play', emoji: '🎈' },
-    optionB: { title: '치밀한 전략과 승패가 있는 몰입의 두뇌 게임', desc: '정교한 룰 안에서 수싸움을 벌이고 한 끗 차이로 승리하는 짜릿함', valueKey: 'rule_play', emoji: '♟️' }
+    title: '놀이의 가장 이상적인 모습',
+    question: '당신에게 "진정한 놀이(Play)"란 어떤 의미를 갖나요?',
+    familyTopic: '가족 대화: "언제 노는 게 가장 신나고 시간 가는 줄 모르나요?"',
+    options: [
+      { text: '어떤 목적이나 성과도 없이, 어린아이처럼 순수하게 웃고 까르르 구르는 것', valueKey: 'playfulness', desc: '순수 무목적 유희' },
+      { text: '정교한 규칙과 수싸움 속에서 전략을 세워 승리를 쟁취하는 두뇌 승부', valueKey: 'mastery', desc: '전략적 두뇌 게임' },
+      { text: '가족들과 둘러앉아 맛있는 것을 먹으며 스킨십하고 정을 나누는 것', valueKey: 'connection', desc: '따뜻한 온기의 공유' },
+      { text: '일상의 중압감에서 완전히 벗어나 자연 속에서 몸과 영혼을 해방하는 것', valueKey: 'peace', desc: '해방과 힐링' }
+    ]
   },
   {
     id: 'q42', themeId: 'theme_5',
-    title: '몸으로 놀기 vs 머리로 놀기',
-    question: '주말 오후, 스트레스를 날려버리는 최고의 놀이 방식은?',
-    familyTopic: '가족 대화: "땀 뻘뻘 흘리며 뛰노는 운동이 신나나요, 보드게임이나 방탈출처럼 머리 쓰는 놀이가 신나나요?"',
-    optionA: { title: '땀 뻘뻘 흘리는 신체적 뜀박질과 몸놀이', desc: '베개 싸움, 물총 싸움, 달리기, 댄스 배틀처럼 온몸의 감각을 해방하기', valueKey: 'free_play', emoji: '🏃' },
-    optionB: { title: '추리와 반전이 있는 실내 방탈출과 보드게임', desc: '단서를 조합하고 비밀 코드를 풀며 지적 카타르시스를 맛보기', valueKey: 'rule_play', emoji: '🧩' }
+    title: '몸으로 놀기 vs 감각으로 즐기기',
+    question: '날씨 좋은 봄날 오후, 몸을 움직여 놀 때 가장 신나는 방식은?',
+    familyTopic: '가족 대화: "몸을 쓰며 놀 때 어떤 놀이가 제일 재밌나요?"',
+    options: [
+      { text: '물총 싸움, 얼음땡, 베개 싸움처럼 규칙 없이 땀 흘리며 뛰노는 난투극', valueKey: 'playfulness', desc: '원초적 신체 놀이' },
+      { text: '배드민턴이나 탁구처럼 랠리를 이어가며 정밀한 타구 감각을 즐기는 스포츠', valueKey: 'mastery', desc: '정교한 신체 컨트롤' },
+      { text: '카약이나 숲속 트레일 러닝처럼 대자연의 호흡과 내 몸을 맞추는 야외 활동', valueKey: 'peace', desc: '자연과의 일체감' },
+      { text: '온 가족이 손잡고 자전거를 타며 강바람을 쐬는 평화로운 라이딩', valueKey: 'connection', desc: '함께하는 평화' }
+    ]
   },
   {
     id: 'q43', themeId: 'theme_5',
-    title: '가족 파티의 형태',
-    question: '우리 가족만의 유쾌한 명절/기념일 놀이를 기획한다면?',
-    familyTopic: '가족 대화: "엉뚱한 분장 쇼와 노래자랑이 재밌을까요, 온 가족 탁구 대회나 부루마블 챔피언십이 재밌을까요?"',
-    optionA: { title: '엉뚱한 코스튬 분장 쇼와 즉흥 연극', desc: '서로의 우스꽝스러운 모습을 보며 배꼽 잡고 웃는 무제한 창의 놀이', valueKey: 'free_play', emoji: '🎭' },
-    optionB: { title: '트로피와 벌칙이 걸린 온 가족 올림픽 토너먼트', desc: '탁구, 제기차기, 윷놀이 등 정정당당하게 챔피언을 가리는 긴장감', valueKey: 'rule_play', emoji: '🥇' }
+    title: '가족 파티를 준비할 때',
+    question: '우리 가족만의 특별한 기념일 파티를 연다면 가장 넣고 싶은 이벤트는?',
+    familyTopic: '가족 대화: "가족 파티를 연다면 어떤 이벤트를 꼭 해보고 싶나요?"',
+    options: [
+      { text: '우스꽝스러운 분장을 하고 서로를 흉내 내는 가족 코믹 연극 쇼', valueKey: 'playfulness', desc: '유쾌한 웃음 쇼' },
+      { text: '지난 1년간 서로에게 고마웠던 순간들을 적은 롤링페이퍼와 포옹식', valueKey: 'connection', desc: '감사와 감동의 의식' },
+      { text: '각자 갈고닦은 장기(악기, 마술, 요리)를 선보이는 가족 탤런트 쇼', valueKey: 'mastery', desc: '기예의 발표회' },
+      { text: '화려한 파티 대신 마당에 모닥불을 피우고 별을 보며 조용히 나누는 도란도란 대화', valueKey: 'peace', desc: '모닥불 명상과 쉼' }
+    ]
   },
   {
     id: 'q44', themeId: 'theme_5',
-    title: '유머와 웃음의 코드',
-    question: '나를 가장 빵 터지게 만드는 유머의 스타일은?',
-    familyTopic: '가족 대화: "예측 불가능하고 몸개그가 섞인 엉뚱함이 웃기나요, 치밀하게 계산된 말장난과 풍자가 웃기나요?"',
-    optionA: { title: '아이들의 천진난만한 엉뚱함과 슬랩스틱', desc: '계산되지 않은 순수함에서 터져 나오는 무장해제 웃음', valueKey: 'free_play', emoji: '🤣' },
-    optionB: { title: '허를 찌르는 고급 위트와 반전의 풍자', desc: '상황을 뒤집는 날카로운 지적 유머와 타이밍의 미학', valueKey: 'rule_play', emoji: '😏' }
+    title: '유머와 웃음의 힘',
+    question: '삶이 팍팍하고 힘들 때 당신에게 가장 필요한 유머의 형태는?',
+    familyTopic: '가족 대화: "어려운 일이 있을 때 웃음이 어떤 힘을 주나요?"',
+    options: [
+      { text: '심각한 상황도 한순간에 털어버리게 만드는 엉뚱하고 유쾌한 반전 개그', valueKey: 'playfulness', desc: '무장해제 웃음' },
+      { text: '세상의 모순을 날카롭게 찌르며 지적 카타르시스를 주는 블랙 유머', valueKey: 'curiosity', desc: '지적 통찰의 풍자' },
+      { text: '상대방의 실수를 부드럽게 감싸주며 긴장을 풀어주는 다정한 온기의 미소', valueKey: 'connection', desc: '포용적인 미소' },
+      { text: '자신의 부족함을 인정하며 씩 웃어 넘기는 여유로운 자기 풍자(셀프 디스)', valueKey: 'peace', desc: '초연한 마음의 여유' }
+    ]
   },
   {
     id: 'q45', themeId: 'theme_5',
-    title: '장난감과 놀잇감',
-    question: '방 한구석에 두고 싶은 나의 최애 놀이 도구는?',
-    familyTopic: '가족 대화: "형태가 정해지지 않은 레고나 찰흙이 좋나요, 규칙이 명확한 플레이스테이션 콘솔 게임이 좋나요?"',
-    optionA: { title: '정답이 없는 자유 블록(레고)과 캔버스', desc: '설명서 없이 내 상상대로 무엇이든 조립하고 부수는 무한 놀이', valueKey: 'free_play', emoji: '🧱' },
-    optionB: { title: '정교한 퀘스트와 레벨업이 있는 비디오 콘솔', desc: '목표를 격파하고 장비를 업그레이드하며 스테이지를 클리어하는 쾌감', valueKey: 'rule_play', emoji: '🎮' }
+    title: '어릴 적 추억의 소환',
+    question: '초등학생 시절, 시간 가는 줄 모르고 빠져들었던 놀이 중 가장 그리운 것은?',
+    familyTopic: '가족 대화: "어릴 때 가장 재미있게 했던 놀이는 무엇이었나요?"',
+    options: [
+      { text: '동네 골목을 누비며 비밀 아지트를 짓고 숨바꼭질하던 탐험 놀이', valueKey: 'adventure', desc: '골목 탐험의 스릴' },
+      { text: '종이인형 옷 입히기, 프라모델 조립, 만화 그리기처럼 손으로 꼼지락거리던 창작', valueKey: 'mastery', desc: '손끝 창작의 몰입' },
+      { text: '친구들과 모여 딱지치기, 구슬치기, 고무줄놀이 하며 해 질 녘까지 웃던 시간', valueKey: 'playfulness', desc: '순수한 친구와의 유희' },
+      { text: '혼자 방구석에서 백과사전이나 동화책을 읽으며 미지의 세계를 상상하던 고요함', valueKey: 'curiosity', desc: '상상의 나래' }
+    ]
   },
   {
     id: 'q46', themeId: 'theme_5',
-    title: '야외에서의 놀이',
-    question: '숲이나 바닷가에 갔을 때 나를 사로잡는 행동은?',
-    familyTopic: '가족 대화: "파도에 발 담그고 조개껍데기 줍는 게 좋나요, 가족 대항 모래성 뺏기나 축구 한판이 좋나요?"',
-    optionA: { title: '파도와 숨바꼭질하고 조개껍데기 줍기', desc: '자연이 주는 우연한 선물에 마음을 빼앗기는 평화로운 몰입', valueKey: 'free_play', emoji: '🐚' },
-    optionB: { title: '편을 갈라 벌이는 비치발리볼과 모래성 깃발 게임', desc: '모두가 한마음으로 응원하며 승리의 세리머니를 외치는 순간', valueKey: 'rule_play', emoji: '🏐' }
+    title: '휴일의 낮잠과 멍때리기',
+    question: '햇살 좋은 휴일 오후의 낮잠에 대해 당신이 느끼는 감정은?',
+    familyTopic: '가족 대화: "낮잠 자는 시간을 좋아하나요, 시간이 아깝다고 느끼나요?"',
+    options: [
+      { text: '그 어떤 명약보다 몸과 마음에 생기를 불어넣어 주는 지복(至福)의 휴식', valueKey: 'peace', desc: '완벽한 쉼과 충전' },
+      { text: '잠자기보다는 그 시간에 산책을 하거나 취미를 즐기는 것이 더 알차다.', valueKey: 'impact', desc: '생산적인 시간 활용' },
+      { text: '가족들과 한 이불을 덮고 뒹굴거리며 잠드는 따뜻한 행복', valueKey: 'connection', desc: '함께 누리는 안온함' },
+      { text: '낮잠에서 깨어났을 때 마시는 시원한 물 한 잔과 가벼워진 머리로 책 읽기', valueKey: 'curiosity', desc: '맑아진 뇌의 즐거움' }
+    ]
   },
   {
     id: 'q47', themeId: 'theme_5',
-    title: '놀이와 일상의 경계',
-    question: '지루한 집안일(청소, 설거지)을 대할 때 나의 유쾌한 비법은?',
-    familyTopic: '가족 대화: "신나는 음악 틀고 춤추며 청소하는 게 좋나요, 15분 타이머 맞춰두고 스피드 챌린지 하는 게 좋나요?"',
-    optionA: { title: '좋아하는 음악을 크게 틀고 리듬 타며 춤추기', desc: '의무를 페스티벌로 바꾸어버리는 마법 같은 유쾌함', valueKey: 'free_play', emoji: '💃' },
-    optionB: { title: '스톱워치를 켜고 기록 단축 퀘스트 깨기', desc: '자신과의 기록 싸움을 벌이며 보상을 얻어내는 게임화(Gamification)', valueKey: 'rule_play', emoji: '⏱️' }
+    title: '보드게임을 할 때 나의 플레이 스타일',
+    question: '가족들과 부루마블이나 루미큐브 같은 보드게임을 할 때 나의 태도는?',
+    familyTopic: '가족 대화: "보드게임 할 때 이기는 게 중요한가요, 다 같이 웃는 게 좋은가요?"',
+    options: [
+      { text: '치밀하게 상대방의 수를 계산하고 확률을 따져 반드시 승리를 쟁취한다.', valueKey: 'impact', desc: '치밀한 승부욕' },
+      { text: '승패는 상관없고 상대방이 벌칙에 걸려 당황하는 모습을 보며 깔깔 웃는다.', valueKey: 'playfulness', desc: '유쾌한 웃음' },
+      { text: '점수가 뒤처진 아이나 배우자가 소외되지 않도록 슬쩍 힌트를 주고 도와준다.', valueKey: 'altruism', desc: '배려와 화합' },
+      { text: '게임 자체의 룰과 메커니즘이 얼마나 정교하게 설계되었는지 감탄하며 관찰한다.', valueKey: 'curiosity', desc: '시스템적 호기심' }
+    ]
   },
   {
     id: 'q48', themeId: 'theme_5',
-    title: '놀이 파트너',
-    question: '놀 때 나를 가장 편안하고 신나게 만들어주는 사람은?',
-    familyTopic: '가족 대화: "아무 생각 없이 같이 바보짓 해주는 친구가 좋나요, 룰을 잘 알고 티키타카가 되는 든든한 파트너가 좋나요?"',
-    optionA: { title: '체면 차리지 않고 함께 망가져 주는 친구', desc: '나이와 신분을 잊고 어린 시절로 돌아가 동심을 나눌 수 있는 사람', valueKey: 'free_play', emoji: '🤪' },
-    optionB: { title: '게임 매너가 좋고 실력이 팽팽한 라이벌', desc: '서로를 긴장시키며 최고의 실력을 이끌어내 주는 멋진 플레이어', valueKey: 'rule_play', emoji: '🤺' }
+    title: '단 하루의 시간 여행이 가능하다면',
+    question: '타임머신을 타고 단 하루를 다녀올 수 있다면 어디로 가고 싶나요?',
+    familyTopic: '가족 대화: "과거와 미래 중 하루를 다녀올 수 있다면 언제로 가보고 싶나요?"',
+    options: [
+      { text: '100년 뒤 미래로 가서 인류가 우주를 어떻게 개척했는지 신기술을 확인하기', valueKey: 'curiosity', desc: '미래의 지적 호기심' },
+      { text: '아무 걱정 없이 뛰놀던 내 어린 시절 초등학교 운동회 날로 돌아가 신나게 달리기', valueKey: 'playfulness', desc: '동심의 시간으로 회귀' },
+      { text: '부모님의 젊은 시절로 가서 두 분의 청춘을 응원하고 따뜻하게 안아드리기', valueKey: 'connection', desc: '가족 사랑의 회복' },
+      { text: '레오나르도 다빈치나 아인슈타인의 작업실에 가서 그들의 거장적 영감을 엿보기', valueKey: 'mastery', desc: '거장의 순간 목격' }
+    ]
   },
   {
     id: 'q49', themeId: 'theme_5',
-    title: '나이 듦과 놀이',
-    question: '어른이 되어서도 절대 잃어버리고 싶지 않은 마음은?',
-    familyTopic: '가족 대화: "사소한 것에도 까르르 웃는 순수한 동심이 소중할까요, 인생의 난관을 유쾌하게 게임처럼 푸는 지혜가 소중할까요?"',
-    optionA: { title: '낙엽 굴러가는 소리에도 웃음 짓는 천진함', desc: '세상의 냉소에 물들지 않고 매일 경이로움을 발견하는 아이의 마음', valueKey: 'free_play', emoji: '🎠' },
-    optionB: { title: '어떤 역경도 유쾌한 도전 과제로 넘기는 위트', desc: '삶을 심각한 비극이 아닌 흥미진진한 탐험 게임으로 바라보는 여유', valueKey: 'rule_play', emoji: '🎩' }
+    title: '행복의 가장 단순한 정의',
+    question: '당신에게 "지금 참 행복하다"고 느끼게 만드는 가장 소박한 순간은?',
+    familyTopic: '가족 대화: "일상에서 언제 가장 행복하다고 느끼나요?"',
+    options: [
+      { text: '깨끗이 정돈된 방에서 온 가족이 모여 맛있는 찌개를 함께 떠먹을 때', valueKey: 'connection', desc: '밥상의 온기' },
+      { text: '누구의 방해도 받지 않고 내가 좋아하는 일에 완전히 푹 빠져 있을 때', valueKey: 'autonomy', desc: '온전한 몰입의 자유' },
+      { text: '창가에 스며드는 따스한 볕을 받으며 아무 걱정 없이 차를 홀짝일 때', valueKey: 'peace', desc: '무념무상의 평온' },
+      { text: '사소한 일로 가족들과 눈이 마주쳐 빵 터져서 눈물 나게 웃을 때', valueKey: 'playfulness', desc: '웃음의 축제' }
+    ]
   },
   {
     id: 'q50', themeId: 'theme_5',
-    title: '인생이라는 거대한 놀이터',
-    question: '생의 마지막 순간, 내 삶을 단 한마디로 요약한다면?',
-    familyTopic: '가족 대화: ""정말 신나게 놀다 간다!"가 좋을까요, "최선을 다해 멋진 게임 한판 잘 치렀다!"가 좋을까요?"',
-    optionA: { title: '"아, 지구별 소풍 정말 눈부시게 잘 놀다 간다!"', desc: '그 어떤 짐도 남기지 않고 순수한 기쁨으로 삶을 노래했던 영혼', valueKey: 'free_play', emoji: '🌌' },
-    optionB: { title: '"후회 없이 명승부를 펼친 최고의 한판 승부였다!"', desc: '자신에게 주어진 패를 가지고 끝까지 지혜롭게 인생을 경영한 승부사', valueKey: 'rule_play', emoji: '👑' }
+    title: '생의 마지막 날, 80세 생일의 헌사',
+    question: '먼 훗날 내 삶의 황혼에서, 사랑하는 사람들에게 가장 듣고 싶은 단 한마디는?',
+    familyTopic: '가족 대화: "먼 훗날 어떤 사람으로 기억되고 싶나요?"',
+    options: [
+      { text: '"당신은 어떤 시련 속에서도 자기 삶의 주인이 되어 눈부시게 당당했습니다."', valueKey: 'autonomy', desc: '자율적 주체의 삶' },
+      { text: '"당신 덕분에 우리 가족과 세상이 훨씬 더 따뜻하고 안전해졌습니다."', valueKey: 'connection', desc: '사랑과 헌신의 삶' },
+      { text: '"당신은 타협하지 않고 자신의 일에서 최고의 아름다움과 깊이를 남겼습니다."', valueKey: 'mastery', desc: '탁월한 장인의 삶' },
+      { text: '"당신은 세상을 너무 심각하게만 보지 않고, 늘 웃음과 유쾌함으로 물들였습니다."', valueKey: 'playfulness', desc: '축제 같은 동심의 삶' }
+    ]
   }
 ];
 
-// --- 6대 영역(직업, 공부, 취미, 놀이, 여행지, 생활활동) 추천 데이터베이스 ---
+// --- 10대 핵심 가치관별 6대 영역 상세 추천 데이터베이스 (각 영역별 구체 항목 5개 이상 엄선) ---
 const SIX_DIMENSIONS_RECOMMENDATIONS = {
   autonomy: {
-    name: '자율과 독립',
-    color: 'amber',
+    name: '자율과 독립 (Autonomy & Self-Direction)',
+    badge: '내 삶의 진정한 입법자',
+    philosophy: '타인의 기대나 조직의 관성에 휘둘리지 않고, 자신의 직관과 신념에 따라 삶의 방향키를 쥐는 실존적 태도입니다. 자유는 방종이 아니라 스스로에게 규칙을 부여하고 책임지는 고결한 용기에서 비롯됩니다.',
     career: {
-      adult: '1인 지식 창업가, 독립 연구자, 프리랜서 전문 컨설턴트, 1인 출판가 및 칼럼니스트 (누구의 눈치도 보지 않고 내 속도와 리듬으로 일하는 독자적 생계 모델)',
-      child: '프로젝트 기반 메이커, 인디 게임 기획자, 독립 탐험가 (스스로 규칙을 정하고 주도적으로 퀘스트를 완수하는 역할)'
+      adult: [
+        '1인 지식 창업가 (전문 칼럼, 온라인 지식 강좌, 뉴스레터 발행)',
+        '독립 전문 컨설턴트 / 1인 부티크 자문역 (원하는 클라이언트만 선택 수주)',
+        '독립 출판 저술가 및 북 디렉터 (기획부터 집필까지 주도)',
+        '원격 디지털 노마드 소프트웨어/데이터 기획자',
+        '맞춤형 1인 스튜디오 공방 대표 (예약제 1:1 맞춤 제작)'
+      ],
+      child: [
+        '독립 프로젝트 메이커 (스스로 문제를 정의하고 결과물을 만드는 인재)',
+        '인디 게임 기획 및 시나리오 작가',
+        '청소년 독립 미디어 크리에이터 (자기만의 관점으로 세상 탐색)',
+        '자율 연구형 과학 탐험가',
+        '나만의 브랜드를 직접 런칭하는 청소년 스타트업 창업가'
+      ]
     },
-    study: '원하는 주제를 파고드는 자율 독서 프로젝트, 1인 AI 도구 활용법 및 코딩, 삶의 철학적 사유 글쓰기',
-    hobby: '나 홀로 트레킹, 1인 목공예, 필름 카메라로 거리 기록하기, 조용한 나만의 서재 꾸미기',
-    play: '혼자만의 규칙으로 만드는 자유 블록 조립, 상상 속 세계관 지도 그리기, 나만의 비밀 암호 만들기',
-    travel: '제주도 한 달 살기 조용한 시골 마을, 한적한 산속 오두막 리트릿, 발길 닿는 대로 떠나는 무계획 자유 여행',
-    life: '아침 기상 후 1시간 스마트폰 없는 "나만의 고요 시간(Solitude Hour)", 하루 계획을 스스로 주도하여 작성하기'
+    study: [
+      '관심 주제를 스스로 커리큘럼화하는 자율 탐구 프로젝트 독서법',
+      '1인 생산성을 극대화하는 생성형 AI 및 노코드(No-Code) 툴 활용법',
+      '니체와 에픽테토스의 실존주의 및 스토아 철학 사유 공부',
+      '독립적인 생계를 뒷받침하는 1인 비즈니스 모델 및 지식재산권 공부',
+      '자율적 사고를 기르는 논리적 에세이 작성 및 비판적 사고 훈련'
+    ],
+    hobby: [
+      '나 홀로 백패킹 및 트레킹 (나만의 템포로 걷는 고독의 여정)',
+      '필름 카메라로 도심의 숨겨진 골목 기록하기 (빛과 구도의 독립 작업)',
+      '1인 가구 목공예 (설계부터 샌딩까지 내 손으로 완결 짓기)',
+      '나만의 서재 꾸미기 및 독자적 서평 아카이빙',
+      '혼자 떠나는 로드바이크 라이딩 및 국토 종주'
+    ],
+    play: [
+      '설명서 없이 마음대로 상상하며 조립하는 자유 블록 창작',
+      '나만의 가상 세계관 지도 및 독자적 국가 헌법 만들기 놀이',
+      '가족들이 절대 풀지 못하는 기발한 비밀 암호 및 보물찾기 지도 제작',
+      '스마트폰 없이 대중교통만으로 즉흥적으로 낯선 역에 내려 탐험하기',
+      '혼자서 캐릭터를 1인 다역으로 연기하는 즉흥 낭독극 놀이'
+    ],
+    travel: [
+      '제주도 조용한 시골 마을 한 달 살기 (계획 없이 바람 따라 걷기)',
+      '강원도 인제 자작나무 숲속의 고요한 오두막 리트릿',
+      '스위스 알프스 산자락 나 홀로 산악 열차 및 트레킹 여행',
+      '지리산 피아골의 한적한 템플스테이 (완전한 디지털 디톡스)',
+      '포르투갈 포르투의 작은 골목길 아파트에서 보내는 느긋한 일주일'
+    ],
+    life: [
+      '아침 기상 후 1시간 스마트폰 없는 "나만의 고요 시간(Solitude Hour)"',
+      '타인의 간섭 없이 하루 목표를 스스로 결정하는 모닝 저널링',
+      '주 1회 반나절 동안 누구와도 약속 잡지 않고 오롯이 나에게 몰입하는 "자율의 날"',
+      '내 방의 물건을 미니멀하게 정리하여 시각적 주도권 회복하기',
+      '잠들기 전 "오늘 내가 스스로 결정한 가장 자랑스러운 선택 1가지" 기록하기'
+    ]
   },
+
   security: {
-    name: '안정과 유대',
-    color: 'emerald',
+    name: '안정과 유대 (Security & Belonging)',
+    badge: '흔들리지 않는 든든한 방파제',
+    philosophy: '예측 불가능한 세상의 파도 속에서 사랑하는 이들을 안전하게 보호하고 단단한 삶의 기반을 가꾸는 태도입니다. 진정한 평화는 튼튼한 울타리와 깊은 신뢰 관계에서 피어납니다.',
     career: {
-      adult: '협동조합 운영자, 공공 가치 기반 커뮤니티 매니저, 지속가능한 패밀리 비즈니스, 신뢰 기반 가족 상담사',
-      child: '팀을 조화롭게 이끄는 캡틴, 환경 보호 연구원, 가족과 친구를 지키는 안전 설계자'
+      adult: [
+        '공공 가치 기반 비영리 재단 / 협동조합 운영자',
+        '가족 비즈니스 및 장기 지속가능형 브랜드 매니저',
+        '신뢰 기반 생애 설계 및 가족 재무 자산 상담사',
+        '지역사회 안전망 및 커뮤니티 케어 디렉터',
+        '품질 인증 및 안전 규격 전문 심사원'
+      ],
+      child: [
+        '팀을 화합으로 이끄는 조화로운 서번트 리더',
+        '생태계와 환경을 지키는 환경 안전 연구원',
+        '위기 상황에서 생명을 구하는 응급구조 및 소방 방재 전문가',
+        '신뢰를 지키는 법률 및 사이버 보안 전문가',
+        '가족과 친구들의 건강을 챙기는 영양 및 보건 전문가'
+      ]
     },
-    study: '가족 경제학 및 자산 관리, 심리학 기반의 따뜻한 비폭력 대화법, 생태계와 공존에 대한 과학 공부',
-    hobby: '온 가족 함께하는 보드게임 밤, 텃밭 가꾸기와 건강 요리 연구, 패밀리 합창 및 악기 앙상블',
-    play: '온 가족이 둘러앉아 하는 부루마블/루미큐브 대회, 윷놀이 토너먼트, 가족 요리 대항전',
-    travel: '편안하고 자연이 풍성한 국립자연휴양림, 따뜻한 온천 힐링 여행, 사계절 추억이 깃든 전통 한옥 스테이',
-    life: '저녁 식탁에서 "오늘 서로에게 고마웠던 점 1가지" 나누기, 주말 온 가족 대청소 후 따뜻한 차 한잔'
+    study: [
+      '가족 경제를 든든하게 받치는 실전 자산 배분 및 금융 리터러시',
+      '가정 내 갈등을 예방하는 비폭력 대화법(NVC)과 가족 심리학',
+      '기후 변화와 식량 안보에 대비하는 도시 농업 및 가드닝 과학',
+      '가정 응급처치(CPR) 및 재난 대비 생존 프로토콜 공부',
+      '지속가능한 삶을 가꾸는 생활 속 친환경 미니멀 라이프 실천법'
+    ],
+    hobby: [
+      '온 가족이 둘러앉아 즐기는 클래식 보드게임 나이트 (루미큐브, 부루마블)',
+      '베란다 텃밭 가꾸기와 직접 수확한 작물로 건강 식탁 차리기',
+      '가족 전통 레시피 북 만들기 및 홈 베이킹',
+      '가족 합창 또는 악기 합주 (소리의 조화 느끼기)',
+      '집안 시설 안전 보수 및 편안한 조명 인테리어 연구'
+    ],
+    play: [
+      '가족 대항 전통 윷놀이 및 제기차기 토너먼트 (간식 내기)',
+      '온 가족이 함께 거실에 텐트를 치고 즐기는 실내 패밀리 캠핑',
+      '서로의 장점을 적어주는 칭찬 롤링페이퍼 및 마니또 수호천사 놀이',
+      '가족 옛날 사진을 보며 그때의 에피소드를 맞추는 추억 퀴즈 배틀',
+      '가족 요리 대항전 (냉장고 파먹기 요리 대회)'
+    ],
+    travel: [
+      '국립자연휴양림의 울창한 숲속 통나무집 가족 휴양 (안면도, 유명산)',
+      '사계절 온천수가 흐르는 따뜻한 전통 힐링 온천 스테이 (수안보, 덕구)',
+      '안락한 시설과 자연이 완벽히 조화된 글램핑 리조트',
+      '역사와 정취가 살아있는 전주 또는 안동의 든든한 전통 한옥 마을',
+      '가족 전용 프라이빗 풀빌라에서 보내는 안락한 휴가'
+    ],
+    life: [
+      '저녁 식탁에서 "오늘 서로에게 고마웠던 점 1가지" 나누기',
+      '매주 일요일 오전 온 가족이 함께 집안을 정돈하고 환기하는 대청소 리추얼',
+      '매월 1회 가족 재무 회의를 열어 투명하고 안심할 수 있는 미래 설계하기',
+      '비상 구급약품 상자 점검 및 유통기한 확인하기',
+      '가족들에게 하루 한 번 다정하게 안부 묻기와 따뜻한 포옹'
+    ]
   },
+
   adventure: {
-    name: '도전과 창조',
-    color: 'orange',
+    name: '모험과 개척 (Adventure & Stimulation)',
+    badge: '미지의 지평선을 여는 탐험가',
+    philosophy: '안전지대에 안주하지 않고, 심장이 뛰는 낯선 길로 한 걸음 내딛는 역동적인 용기입니다. 삶의 생명력은 예측 불가능한 도전과 새로운 시도 속에서 가장 뜨겁게 타오릅니다.',
     career: {
-      adult: '새로운 영역의 스타트업 창업, 에이전시 크리에이티브 디렉터, 여행 작가, 미래 기술 트렌드 큐레이터',
-      child: '우주/해양 탐험가, 신기술 로봇 연구원, 미지의 세계를 그리는 SF 웹툰 작가'
+      adult: [
+        '새로운 영역을 개척하는 기술 기반 스타트업 창업가',
+        '글로벌 트렌드를 포착하는 크리에이티브 콘텐츠 디렉터',
+        '오지 및 이색 여행 전문 다큐멘터리 기획자 / 여행 작가',
+        '신사업 발굴 및 액셀러레이터 투자 심사역',
+        '아웃도어 익스트림 스포츠 브랜드 총괄 기획자'
+      ],
+      child: [
+        '우주 정거장과 화성 탐사를 꿈꾸는 우주항공 과학자',
+        '심해와 미지의 생태계를 탐구하는 해양 탐험가',
+        '신기술을 적용한 미래 모빌리티/드론 레이싱 개발자',
+        '가상현실(VR) 속 미지의 세계를 짓는 메타버스 건축가',
+        '새로운 스포츠 종목을 개척하는 만능 액티비티 모험가'
+      ]
     },
-    study: '생성형 AI로 상상을 바로 영상/앱으로 만들기, 미래 우주과학 및 천체물리학, 새로운 외국어 배우기',
-    hobby: '볼더링 클라이밍, 바다 서핑, 낯선 악기 즉흥 연주, 매주 가보지 않은 낯선 길로 산책하기',
-    play: '온 가족 실내 암벽등반 배틀, 물총 서바이벌 게임, 스마트폰 없는 도심 런닝맨 미션 투어',
-    travel: '몽골 대초원 은하수 텐트 투어, 지리산 천왕봉 일출 트레킹, 낯선 문화가 숨 쉬는 이색 예술 마을',
-    life: '매주 주말 "처음 해보는 일 1가지 도전하기(새로운 요리, 새로운 길, 새로운 운동)", 아침 활력 찬물 세안'
+    study: [
+      '생성형 AI로 상상한 스토리를 즉시 애니메이션/게임으로 구현하는 신기술 학습',
+      '천체물리학과 인류의 우주 탐사 역사 독파',
+      '생존 수영, 프리다이빙, 암벽등반 등 신체 역학 스포츠 이론',
+      '글로벌 소통을 위한 제2외국어 회화 훈련',
+      '인류 문명사를 뒤흔든 위대한 탐험가들의 생애와 실패 극복기 분석'
+    ],
+    hobby: [
+      '볼더링 및 실내외 인공 암벽등반 (한계 돌파의 짜릿함)',
+      '동해안 파도를 가르는 바다 서핑 및 패들보드',
+      '매주 가보지 않은 낯선 동네와 등산로 무작정 걸어보기',
+      '오프로드 바이크 또는 산악 자전거(MTB) 트레일 라이딩',
+      '낯선 악기(아프리카 젬베, 전자 드럼) 즉흥 연주 배우기'
+    ],
+    play: [
+      '스마트폰 지도를 끄고 나침반과 종이 지도만으로 목적지 찾아가는 런닝맨 보물찾기',
+      '물총 서바이벌 및 장애물 통과 스피드 챌린지',
+      '가족 방탈출 카페 정복하기 (가장 난이도 높은 테마 도전)',
+      '어두운 숲속에서 손전등 하나로 곤충과 별자리 관찰하는 야간 사파리',
+      '새로운 보드게임 규칙을 가족끼리 완전히 뒤집어 새로운 룰로 경기하기'
+    ],
+    travel: [
+      '몽골 대초원에서 은하수 쏟아지는 밤하늘 아래 텐트 캠핑',
+      '지리산 천왕봉 일출 야간 산행 (밤하늘 별을 보며 오르는 여정)',
+      '아이슬란드 빙하 트레킹과 오로라 탐사 여행',
+      '울릉도·독도 해안 트레킹 및 스노클링 탐험',
+      '베트남 사파의 고산지대 다랑이 논 트레킹'
+    ],
+    life: [
+      '매주 주말 "인생에서 처음 해보는 행동 1가지" 실행하기 (새로운 음식, 새로운 길, 새로운 운동)',
+      '기상 직후 찬물 세안으로 온몸의 감각과 세포 깨우기',
+      '엘리베이터 대신 계단 2단씩 뛰어오르며 심폐 활력 끌어올리기',
+      '하루 1번 일상 속 루틴을 일부러 살짝 깨뜨려 낯선 자극 주기',
+      '버킷리스트 지도에 핀을 꽂고 다음 달 실행할 모험 날짜 예약하기'
+    ]
   },
+
   peace: {
-    name: '평온과 조화',
-    color: 'teal',
+    name: '평온과 자연조화 (Peace & Serenity)',
+    badge: '깊은 호수처럼 맑은 안식처',
+    philosophy: '과도한 소음과 끝없는 비교 경쟁에서 벗어나, 자연의 리듬과 동기화되며 내면의 고요를 지키는 태도입니다. 진정한 풍요는 더 많이 채우는 것이 아니라 쓸데없는 집착을 비워내는 데 있습니다.',
     career: {
-      adult: '티(Tea) 소믈리에 및 명상 센터 기획자, 식물 큐레이터, 작은 동네 책방지기, 조용한 숲 해설가',
-      child: '동물 행동 교감 전문가, 자연 생태 일러스트레이터, 잔잔한 감성을 전하는 작곡가'
+      adult: [
+        '티(Tea) 소믈리에 및 마음챙김 명상 공간 기획자',
+        '식물 큐레이터 및 치유형 가든 디자이너',
+        '작은 동네 인문학 책방지기 및 북 큐레이터',
+        '국립공원 숲 해설가 및 자연 치유 테라피스트',
+        '느린 호흡의 슬로우 라이프 스테이(Stay) 운영자'
+      ],
+      child: [
+        '동물과 교감하며 마음을 치료하는 동물 매개 치료사',
+        '자연의 사계절을 따스하게 담아내는 생태 일러스트레이터',
+        '지친 현대인에게 안식을 주는 잔잔한 앰비언트 음악 작곡가',
+        '숲과 토양을 복원하는 산림 생태 보존 전문가',
+        '전통 한옥과 정원을 설계하는 생태 건축가'
+      ]
     },
-    study: '동양 고전과 노장 사상, 숲과 식물의 대화(식물학), 뇌를 쉬게 하는 마음챙김 명상 과학',
-    hobby: '식물 분재와 분갈이, 다도(Tea Ceremony), 수채화 어반 스케치, 새소리 들으며 숲 멍때리기',
-    play: '바람 소리 들으며 보물찾기 놀이, 조약돌 탑 쌓기 시합, 조용한 숲속 소리 채집 놀이',
-    travel: '오대산 월정사 전나무 숲길 템플스테이, 청정한 담양 대나무 숲, 고즈넉한 호숫가 쉼터',
-    life: '기상 직후 따뜻한 차 한 잔 마시며 창밖 바라보기, 밤 10시 이후 모든 블루라이트 끄고 촛불 켜기'
+    study: [
+      '노장(노자·장자) 사상과 동양 고전의 "무위자연" 철학',
+      '식물학 및 반려식물의 언어와 토양 생태계 공부',
+      '뇌과학으로 입증된 마음챙김 명상(MBSR)의 과학적 원리',
+      '차(Tea)의 역사와 다도(茶道) 문화 인문학',
+      '소음 공해를 줄이고 감각을 정돈하는 환경 심리학'
+    ],
+    hobby: [
+      '분재와 야생화 분갈이, 아침 이슬 맞으며 텃밭 가꾸기',
+      '다도(Tea Ceremony)를 통해 물 끓는 소리와 차향 음미하기',
+      '자연 풍경 수채화 어반 스케치 (초록빛과 흙빛 담기)',
+      '숲속에 해먹을 걸고 새소리 들으며 멍때리기 (소리 채집)',
+      '천연 향초 만들기 및 아로마 테라피 블렌딩'
+    ],
+    play: [
+      '숲속 조약돌로 쓰러지지 않는 높은 돌탑 쌓기 시합',
+      '눈을 감고 바람 소리, 물소리, 새소리 중 5가지 소리 맞추기 청각 놀이',
+      '가장 예쁜 단풍잎과 솔방울을 찾아 자연 액자 만들기 놀이',
+      '거실 불을 모두 끄고 촛불 하나만 켠 채 그림자 동화 놀이하기',
+      '물방울이 떨어지는 리듬에 맞춰 조용히 손가락 타악기 치기'
+    ],
+    travel: [
+      '오대산 월정사 전나무 숲길 템플스테이 (새벽 안개 예불)',
+      '청정한 대숲이 바람에 흔들리는 담양 대나무 숲길 쉼터',
+      '경북 청송 주왕산 자락의 주산지 호숫가 물안개 산책',
+      '교토의 고즈넉한 이끼 정원과 선종 사찰 기행',
+      '제주 곶자왈 원시림의 깊은 숲길 걷기'
+    ],
+    life: [
+      '기상 직후 따뜻한 차 한 잔을 손에 쥐고 10분간 창밖 바라보기',
+      '밤 10시 이후 모든 전자기기를 끄고 은은한 간접 조명만 켜두기',
+      '식사할 때 스마트폰을 멀리 두고 밥알의 식감과 채소의 향을 온전히 음미하기',
+      '하루 3번 깊은 복식호흡으로 가슴의 긴장 털어내기',
+      '자기 전 "오늘 내 마음을 평온하게 해 준 고마운 풍경 1가지" 떠올리기'
+    ]
   },
+
   altruism: {
-    name: '선한 영향력과 나눔',
-    color: 'rose',
+    name: '이타와 사회공헌 (Altruism & Social Value)',
+    badge: '세상을 맑게 덥히는 따뜻한 온기',
+    philosophy: '나 혼자만의 안녕을 넘어, 타인의 고통에 깊이 공감하고 세상의 어둠에 작은 촛불을 켜는 박애의 태도입니다. 인간의 가장 위대한 존엄성은 누군가를 조건 없이 도울 때 드러납니다.',
     career: {
-      adult: '사회적 기업가, 라이프 코치 및 청소년 멘토, 비영리 임팩트 파트너, 치유형 정원/공간 기획자',
-      child: '소외된 사람을 돕는 따뜻한 발명가, 동물 복지 수의사, 세상을 맑게 하는 환경 운동가'
+      adult: [
+        '소외 계층을 돕는 사회적 기업(Social Enterprise) 대표',
+        '청소년 및 은퇴자 인생 재설계 라이프 코치 / 상담 전문가',
+        '비영리 공익 재단 및 국제 구호 기구 프로젝트 디렉터',
+        '취약 계층을 위한 대안 교육 및 치유형 배움터 설립자',
+        '사회적 약자를 위한 공익 변호사 및 권익 옹호가'
+      ],
+      child: [
+        '장애인과 노인을 돕는 따뜻한 보조 로봇을 만드는 복지 공학자',
+        '버려진 유기동물을 치료하고 보듬는 동물 복지 수의사',
+        '지구 온난화와 기후 난민을 돕는 국제 환경 기구 활동가',
+        '아픈 이들의 마음을 치료하는 따뜻한 소아청소년 의사',
+        '공정한 세상을 만들기 위해 앞장서는 인권 운동가'
+      ]
     },
-    study: '생명 윤리와 도덕 철학, 공감과 비폭력 대화법(NVC), 세상을 바꾼 위인들의 생애 연구',
-    hobby: '유기견 돌봄 봉사, 이웃을 위한 따뜻한 베이킹 나눔, 환경 정화 플로깅(Plogging)',
-    play: '가족 마니또 비밀 미션 게임, 이웃을 위한 서프라이즈 선물 배달 놀이, 칭찬 릴레이 카드 게임',
-    travel: '공정 여행(Fair Travel), 역사와 치유의 의미가 담긴 평화의 길 순례, 시골 마을 일손 돕기 여행',
-    life: '하루에 한 번 누군가에게 진심 어린 칭찬 문자 보내기, 매일 아침 "오늘 내가 도울 수 있는 일" 떠올리기'
+    study: [
+      '도덕 철학과 롤스의 정의론(정의란 무엇인가)',
+      '공감의 심리학과 타인의 아픔을 경청하는 비폭력 대화(NVC)',
+      '세상을 바꾼 위대한 자선가들과 박애주의자들의 생애 연구',
+      '환경 윤리학과 동물 복지법의 현대적 쟁점 공부',
+      '지역사회 문제를 해결하는 디자인 씽킹(Design Thinking) 방법론'
+    ],
+    hobby: [
+      '주말 유기견 보호소 돌봄 및 산책 봉사활동',
+      '이웃과 나누는 따뜻한 수제 베이킹 및 나눔 도시락 제작',
+      '동네 공원과 하천을 조깅하며 쓰레기를 줍는 플로깅(Plogging)',
+      '시각장애인을 위한 오디오북 목소리 낭독 봉사',
+      '뜨개질로 신생아 살리기 모자나 소외 어르신 목도리 짜기'
+    ],
+    play: [
+      '가족 마니또 비밀 미션 놀이 (일주일간 들키지 않고 도와주기)',
+      '이웃 주민에게 몰래 응원의 쪽지와 작은 과일 걸어두는 서프라이즈 놀이',
+      '가족 칭찬 릴레이 카드 게임 (서로의 선한 행동 3가지 찾아 칭찬하기)',
+      '집에 있는 안 쓰는 장난감과 옷을 모아 가족 나눔 장터 열기',
+      '지구 환경을 지키는 1주일 일회용품 제로 챌린지 보드게임'
+    ],
+    travel: [
+      '지역 주민과 공존하는 공정 여행(Fair Travel) - 지리산 슬로시티',
+      '역사적 치유와 평화의 의미를 되새기는 DMZ 평화의 길 순례',
+      '일손이 부족한 시골 유기농 농가 돕기 팜스테이(WWOOF) 여행',
+      '아시아 평화 교류 문화 탐방 및 봉사 여행',
+      '숲과 생태계를 가꾸는 자원봉사 결합형 국립공원 에코 투어'
+    ],
+    life: [
+      '매일 아침 "오늘 내가 누군가에게 베풀 수 있는 작은 친절 1가지" 생각하기',
+      '하루에 한 번 고마운 사람에게 진심을 담은 따뜻한 감사 문자 보내기',
+      '잔돈이나 작은 금액을 모으는 기부 저금통 가족 식탁에 두기',
+      '타인의 실수에 비난 대신 "그럴 수 있지" 하며 너그럽게 품어주기',
+      '자기 전 "오늘 내가 세상에 남긴 따뜻한 흔적" 감사 일기 쓰기'
+    ]
   },
+
   mastery: {
-    name: '전문성과 탁월함',
-    color: 'indigo',
+    name: '장인정신과 탁월함 (Mastery & Craftsmanship)',
+    badge: '극한의 완성도를 빚어내는 장인',
+    philosophy: '쉽고 빠른 지름길을 거부하고, 시간과 정성을 쏟아부어 한 분야의 독보적인 경지에 도달하려는 태도입니다. 타협 없는 완벽주의와 묵묵한 숙련은 그 자체로 거룩한 예술이 됩니다.',
     career: {
-      adult: '독보적 전문 기술 장인(Craftsman), 심층 데이터 분석가, 시니어 아키텍트, 전문 칼럼니스트 및 석학',
-      child: '수학/과학 난제 해결사, 세계 최고 알고리즘 개발자, 완벽한 연주를 해내는 클래식 음악가'
+      adult: [
+        '독보적 완성도를 자랑하는 수제 명품 제작자 (가죽, 목공, 시계)',
+        '복잡한 문제를 우아하게 해결하는 수석 소프트웨어 아키텍트',
+        '데이터를 꿰뚫어 보는 시니어 데이터 사이언티스트 및 석학',
+        '품격 있는 요리를 완성하는 정통 파인다이닝 오너 셰프',
+        '학술적 깊이를 자랑하는 전문 칼럼니스트 및 학자'
+      ],
+      child: [
+        '수학 난제와 알고리즘을 완벽하게 풀어내는 세계적 수학자',
+        '완벽한 터치와 기교로 감동을 주는 클래식 기악 연주자',
+        '인체 구조를 한 치의 오차 없이 집도하는 정밀 외과 의사',
+        '역사에 기록될 독창적 건축물을 짓는 정밀 건축 설계사',
+        '차세대 우주 발사체 엔진을 설계하는 정밀 로켓 공학자'
+      ]
     },
-    study: '한 분야의 클래식 바이블 파고들기, 수학적 사고력 훈련, 고난도 전문 자격 및 논문 분석',
-    hobby: '정밀 프라모델/가구 제작, 가죽 공예의 섬세한 스티치, 체스/바둑의 수읽기 연구',
-    play: '가족 체스/장기 챔피언십, 정밀 도미노 쓰러뜨리기 챌린지, 입체 퍼즐 조립 대결',
-    travel: '세계적 박물관/미술관 도슨트 투어, 유서 깊은 천년 고도의 건축 기행, 장인의 공방 탐방',
-    life: '매일 1시간 "단 하나의 기술을 극한으로 연마하는 딥 워크(Deep Work)", 나의 숙련도 일지 기록'
+    study: [
+      '한 분야의 고전 바이블을 1페이지부터 끝까지 주해하며 읽는 완독 훈련',
+      '말콤 글래드웰의 "아웃라이어"와 안데르스 에릭슨의 "1만 시간의 재발견" 심층 분석',
+      '수학적 사고력과 논리적 알고리즘 퍼즐 훈련',
+      '도구와 재료의 물성학 (나무, 쇠, 섬유의 성질 이해)',
+      '세계적 거장들의 작업 노트와 스케치 아카이브 분석'
+    ],
+    hobby: [
+      '정밀 프라모델 및 디오라마 미니어처 도색 작업 (돋보기 들고 작업)',
+      '전통 가죽 공예의 새들 스티치 한 땀 한 땀 바느질하기',
+      '체스나 바둑의 기보를 복기하며 한 수 한 수 정밀하게 연구하기',
+      '클래식 기타나 바이올린의 어려운 솔로 파트 완벽 마스터하기',
+      '고난도 만년필 캘리그래피 및 정자체 필사'
+    ],
+    play: [
+      '정밀 도미노 1000개 쓰러뜨리기 챌린지 (단 한 번의 실패 없이 완성하기)',
+      '온 가족 체스/오목 챔피언십 (시간제한을 둔 정밀 수싸움)',
+      '3D 입체 퍼즐 및 고난도 직소 퍼즐 1000피스 완성 대결',
+      '공기를 꺾어 던져 한 알도 안 떨어뜨리는 정밀 공기놀이 장인전',
+      '동전 탑을 가장 높게 쌓아 올리는 정밀 밸런스 게임'
+    ],
+    travel: [
+      '유럽의 천년 역사를 간직한 고딕 대성당과 석공 장인의 흔적 탐방',
+      '일본 교토의 100년 넘은 전통 수제 공방 거리 탐방 기행',
+      '독일 명품 자동차 및 시계 박물관 견학 투어',
+      '국내 중요무형문화재 사기장, 옹기장, 낙화장 장인의 가마터 방문',
+      '세계 최고 수준의 국립 미술관 도슨트 심층 투어'
+    ],
+    life: [
+      '매일 1시간 스마트폰과 인터넷을 끄고 오롯이 기술을 연마하는 "딥 워크(Deep Work)"',
+      '작업 도구들을 먼지 하나 없이 닦고 기름칠해 정돈하는 마감 리추얼',
+      '나의 숙련도와 오차를 매일 정량적으로 기록하는 "장인의 성장 일지"',
+      '쉬운 타협이 떠오를 때 "이것이 나의 최선인가?" 스스로에게 묻기',
+      '사소한 디테일 하나라도 끝까지 책임지고 마무리하는 완결 습관'
+    ]
   },
+
   curiosity: {
-    name: '지적 탐구와 진실',
-    color: 'sky',
+    name: '지적 탐구와 진리 (Curiosity & Truth-Seeking)',
+    badge: '우주의 신비를 파헤치는 질문자',
+    philosophy: '당연해 보이는 일상 너머 "왜 그럴까?"를 끝없이 묻고 세상의 근본 원리를 밝혀내려는 순수한 탐구심입니다. 진리를 향한 경외감은 인간의 지성을 가장 숭고한 곳으로 인도합니다.',
     career: {
-      adult: '기초과학 및 인문학 연구자, 다큐멘터리 기획자, 미지의 문제를 탐색하는 사상가, 철학 아카데미 운영',
-      child: '자연사 박물관 큐레이터, 미생물 연구자, 고고학 유물 발굴가'
+      adult: [
+        '기초과학 및 인문학 순수 학술 연구자',
+        '미지의 의문을 파고드는 과학/역사 다큐멘터리 기획자',
+        '철학적 질문을 던지는 대중 아카데미 및 지식 콘텐츠 총괄',
+        '인류의 기원을 추적하는 고고학 및 인류학 현장 연구원',
+        '복잡계 현상을 연구하는 복합 시스템 사상가'
+      ],
+      child: [
+        '미생물과 심해 생물의 신비를 밝히는 기초 생명과학자',
+        '지구 역사와 화석을 발굴하는 고생물학자',
+        '자연사 박물관의 학예연구사 (큐레이터)',
+        '우주 배경복사를 연구하는 천문학자',
+        '사라져가는 세계의 고대 언어를 복원하는 언어학자'
+      ]
     },
-    study: '우주론과 양자역학 교양서 독파, 인류의 기원을 찾는 인류학, 심오한 질문 던지기 훈련',
-    hobby: '천체 망원경으로 달과 행성 관찰하기, 돋보기 들고 곤충/이끼 관찰, 헌책방 보물찾기',
-    play: '방구석 과학 수사대 추리 게임, 돋보기 보물찾기 탐험, 상식 골든벨 퀴즈 대결',
-    travel: '국립 과천과학관 및 천문대 캠핑, 공룡 화석 발굴지 탐방, 유네스코 세계지질공원',
-    life: '매일 밤 "오늘 새롭게 알게 된 경이로운 사실 1가지" 메모하기, 물음표 노트 쓰기'
+    study: [
+      '칼 세이건의 "코스모스"와 리처드 도킨스의 "이기적 유전자" 독파',
+      '양자역학과 상대성 이론 교양 물리 입문',
+      '인간 의식의 진화를 다룬 뇌과학과 인지과학 최신 논문 탐독',
+      '소크라테스 대화편을 읽으며 심오한 질문을 구성하는 훈련',
+      '세계 종교와 신화의 비교 문화 인류학 공부'
+    ],
+    hobby: [
+      '천체 망원경으로 달의 분화구와 목성의 위성 관찰하기',
+      '돋보기와 현미경을 들고 동네 공원의 곤충, 이끼, 잎맥 관찰하기',
+      '고서점과 헌책방을 뒤지며 절판된 귀한 책 보물찾기',
+      '역사적 사건의 비밀을 다룬 미스터리 다큐멘터리 정주행',
+      '생각이 꼬리를 무는 마인드맵 지식 지도 그리기'
+    ],
+    play: [
+      '방구석 과학 수사대 (집안의 미스터리 사건 단서 수사 놀이)',
+      '온 가족 상식 골든벨 퀴즈 쇼 (아빠, 엄마, 아이가 각자 문제 출제)',
+      '백과사전 무작위로 펼쳐서 가장 신기한 단어 찾아 설명하기 배틀',
+      '부엌 재료(베이킹소다, 식초 등)로 화산 폭발 과학 실험 놀이',
+      '"만약 인간이 날 수 있다면?" 가정법 상상력 꼬리물기 대화'
+    ],
+    travel: [
+      '국립 과천과학관 및 영월 별마로 천문대 별자리 캠핑',
+      '한탄강 세계지질공원의 주상절리와 지층 탐사 여행',
+      '공룡 발굴지로 유명한 고성 공룡박물관과 해안 화석지 탐방',
+      '스위스 제네바 유럽입자물리연구소(CERN) 과학 성지 순례',
+      '영국 런던 대영박물관 및 자연사박물관 탐사'
+    ],
+    life: [
+      '매일 밤 "오늘 새롭게 알게 된 경이로운 사실 1가지" 물음표 노트에 적기',
+      '모르는 단어나 개념이 나오면 대충 넘기지 않고 사전에서 어원 찾아보기',
+      '길을 걷다 마주치는 이름 모를 풀꽃의 이름을 식물 도감 앱으로 확인하기',
+      '아이들의 엉뚱한 질문에 "쓸데없는 소리"라 하지 않고 함께 찾아보기',
+      '하루 1번 밤하늘을 올려다보며 우주의 광대함에 경외감 느끼기'
+    ]
   },
+
   impact: {
-    name: '실천적 영향력과 성취',
-    color: 'violet',
+    name: '실천적 성취와 영향력 (Impact & Enterprise)',
+    badge: '아이디어를 현실로 바꾸는 승부사',
+    philosophy: '탁상공론에 머물지 않고, 세상을 바꿀 실질적인 결과물과 시스템을 손에 쥐는 불굴의 실행력입니다. 생각은 행동으로 옮겨져 사람들의 삶에 실질적인 변화를 일으킬 때 완성됩니다.',
     career: {
-      adult: '임팩트 비즈니스 프로덕트 오너, 실물 브랜드 런칭가, 대규모 프로젝트 총괄 리더, 실전 투자자',
-      child: '학교 문제를 해결하는 학생회 리더, 펀딩을 통해 상품을 만드는 청소년 창업가'
+      adult: [
+        '소비자의 삶을 혁신하는 D2C 실물 브랜드 런칭 창업가',
+        '대규모 자금을 움직여 미래 기업을 키우는 실전 투자자/VC',
+        '조직의 체질을 개선하고 매출을 폭발시키는 전문 경영인(CEO)',
+        '수백만 명이 사용하는 플랫폼의 총괄 프로덕트 오너(PO)',
+        '사회적 캠페인을 성공시키는 정책 기획 및 대외협력 총괄 디렉터'
+      ],
+      child: [
+        '학교와 지역 사회의 문제를 해결하는 학생회 회장/청소년 리더',
+        '크라우드 펀딩으로 직접 상품을 만들어 판매하는 청소년 창업가',
+        '세상에 유용한 생활 밀착형 앱을 만드는 주니어 개발자',
+        '기후 변화를 막기 위해 글로벌 캠페인을 주도하는 청소년 활동가',
+        '스포츠 경기에서 팀을 우승으로 이끄는 열정적인 주장'
+      ]
     },
-    study: '린 스타트업과 프로덕트 디자인, 행동경제학 및 마케팅 심리학, 설득력 있는 프레젠테이션',
-    hobby: '나만의 제품 3D 프린팅으로 출력하기, 가죽 소품 만들어 플리마켓 판매해보기, 달리기 마라톤 완주',
-    play: '가족 모의 투자 대회, 당근마켓 물건 판매 미션, 1시간 안에 맛있는 신메뉴 개발하기 배틀',
-    travel: '활력 넘치는 글로벌 혁신 도시 탐방, 치열한 산업 현장 견학, 에너지가 솟구치는 대도시 투어',
-    life: '매주 일요일 저녁 한 주간의 "눈에 보이는 성과 3가지" 점검 및 다음 주 핵심 미션 수립'
+    study: [
+      '린 스타트업(Lean Startup)과 애자일(Agile) 빠른 실행 방법론',
+      '사람의 지갑과 마음을 여는 행동경제학 및 소비자 심리학',
+      '설득력 있는 1분 엘리베이터 피치와 프레젠테이션 스피치 훈련',
+      '재무제표를 읽고 시장의 기회를 포착하는 기업 분석론',
+      '목표를 반드시 달성하게 만드는 OKR과 핵심 습관 설계학'
+    ],
+    hobby: [
+      '3D 프린터로 실생활에 유용한 생활용품 직접 출력하여 쓰기',
+      '중고마켓(당근)에서 안 쓰는 물건을 매력적인 카피로 완판해보기',
+      '10km 마라톤 완주를 목표로 주 3회 체계적인 페이스 훈련',
+      '온라인 스토어에 작은 굿즈 올려보고 주문-배송 시스템 체험하기',
+      '나만의 모의 주식 포트폴리오를 만들어 매주 수익률 분석하기'
+    ],
+    play: [
+      '가족 모의 투자 게임 (가상 화폐로 가족 프로젝트에 베팅하기)',
+      '1시간 안에 주방 재료로 가장 맛있는 샌드위치 신메뉴 런칭 배틀',
+      '제한된 자원으로 가장 튼튼한 스파게티 면 타워 만들기 챌린지',
+      '가족 버킷리스트 실천 펀딩 (집안일 미션 완수 시 상금 적립 게임)',
+      '서로의 방을 10분 안에 가장 깔끔하게 리모델링하는 비포&애프터 대결'
+    ],
+    travel: [
+      '세계의 금융과 혁신이 숨 쉬는 대도시(뉴욕, 도쿄, 싱가포르) 탐방',
+      '첨단 산업과 물류가 쉴 새 없이 움직이는 거대 항만 및 스마트 팩토리 견학',
+      '활기찬 에너지가 넘치는 전 세계 유명 벼룩시장 및 전통 시장 탐방',
+      '역사 속 거대한 제국과 정복자들의 수도(로마, 이스탄불) 기행',
+      '스타트업과 혁신가들이 모여드는 판교/성수동 혁신 밸리 투어'
+    ],
+    life: [
+      '매주 일요일 저녁 한 주간의 "눈에 보이는 성과 3가지" 결산하기',
+      '새벽 6시 기상과 함께 그날의 "가장 중요한 단 하나의 일(The One Thing)" 끝내기',
+      '말끝을 흐리지 않고 명확하고 확신에 찬 어조로 소통하는 연습',
+      '문제가 생겼을 때 변명 대신 "그래서 다음 해결책은 무엇인가?" 즉각 질문하기',
+      '매월 1일 가슴 뛰는 월간 핵심 목표 3가지를 화이트보드에 적어두기'
+    ]
   },
-  free_play: {
-    name: '순수한 유희와 동심',
-    color: 'yellow',
+
+  playfulness: {
+    name: '순수 유희와 창의성 (Playfulness & Creativity)',
+    badge: '어른의 마음속 동심을 깨우는 피터팬',
+    philosophy: '삶을 심각하고 무거운 과제가 아닌, 매 순간이 경이롭고 즐거운 거대한 놀이터로 바라보는 태도입니다. 지혜로운 어른은 어린 시절의 천진난만한 웃음과 놀이 본능을 잃지 않는 사람입니다.',
     career: {
-      adult: '놀이 치료사, 창의적 놀이터 디자이너, 장난감/애니메이션 스토리 작가, 테마파크 크리에이티브',
-      child: '상상력 천재 만화가, 창의적 놀이 발명가, 무대를 즐기는 만능 엔터테이너'
+      adult: [
+        '아이들과 어른의 상처를 웃음으로 보듬는 전문 놀이치료사',
+        '도시의 회색 공간을 유쾌하게 바꾸는 창의적 놀이터 디자이너',
+        '온 가족이 함께 웃을 수 있는 패밀리 애니메이션/웹툰 작가',
+        '테마파크 및 축제 엔터테인먼트 크리에이티브 총괄 디렉터',
+        '보드게임 및 인터랙티브 완구 제품 기획자'
+      ],
+      child: [
+        '세상을 깔깔 웃게 만드는 유쾌한 개그 만화가/웹툰 작가',
+        '상상도 못 한 기상천외한 규칙을 만드는 장난감 발명가',
+        '무대 위에서 노래하고 춤추며 행복을 주는 뮤지컬 배우',
+        '유튜브에서 가족과 함께 재미있는 챌린지를 펼치는 엔터테이너',
+        '아이들의 마음을 사로잡는 차세대 캐릭터 디자이너'
+      ]
     },
-    study: '놀이 인류학(호모 루덴스), 즉흥 연기 및 연극 워크숍, 아이들의 발달 심리학',
-    hobby: '클레이 점토 공예, 레고 디오라마 제작, 즉흥 피아노 연주, 만화 일기 그리기',
-    play: '베개 싸움 배틀, 온 가족 즉흥 댄스 파티, 거실 캠핑과 그림자 연극 놀이',
-    travel: '동화 속 마을 같은 테마파크, 모래사장이 끝없이 펼쳐진 바닷가, 자연 생태 놀이터',
-    life: '하루 한 번 어린아이처럼 소리 내어 크게 웃기, 온 가족 하이파이브 루틴'
+    study: [
+      '요한 하위징아의 "호모 루덴스(놀이하는 인간)" 인류학',
+      '도널드 위니콧의 놀이 이론과 창의적 유희 심리학',
+      '즉흥 연기(Improv) 워크숍을 통한 순발력과 상상력 훈련',
+      '디즈니와 픽사의 유쾌한 스토리텔링 및 캐릭터 창작 기법',
+      '세계 전통 민속놀이와 축제의 유희 문화사'
+    ],
+    hobby: [
+      '클레이 점토나 지점토로 우스꽝스러운 가족 피규어 만들기',
+      '레고 블록으로 만화 속 명장면 디오라마 재현하기',
+      '칼림바나 우쿨렐레로 동요와 경쾌한 만화 주제가 연주하기',
+      '그림 일기장에 하루 중 가장 웃겼던 장면 네 컷 만화로 그리기',
+      '마술 트릭 3가지 마스터해서 가족들에게 깜짝 쇼 보여주기'
+    ],
+    play: [
+      '온 가족 거실 베개 싸움 대난투 (음악이 멈추면 그대로 얼음!)',
+      '가족 막춤 댄스 배틀 (가장 엉뚱한 춤을 춘 사람이 승리)',
+      '이불 터널 통과하기와 거실 의자 장애물 달리기',
+      '웃음 참기 챌린지 (입에 물을 머금고 서로 얼굴 쳐다보기)',
+      '서로의 얼굴에 눈 감고 낙서 없이 스티커 붙여주기 놀이'
+    ],
+    travel: [
+      '동화 속 세상에 들어온 듯한 세계적 테마파크 (에버랜드, 디즈니랜드)',
+      '모래사장에서 끝없이 모래성을 쌓고 파도와 장난칠 수 있는 동해안 바닷가',
+      '신나게 미끄럼틀을 타고 눈썰매를 즐길 수 있는 겨울 눈꽃 언덕',
+      '어린이와 어른이 함께 뛰놀 수 있는 국립현대미술관 어린이 미술관',
+      '알록달록한 동화 벽화와 트릭아트가 가득한 부산 감천문화마을'
+    ],
+    life: [
+      '하루에 한 번 배꼽 잡고 눈물 날 때까지 큰 소리로 웃어보기',
+      '지루한 청소나 설거지할 때 신나는 애니메이션 OST 틀고 리듬 타기',
+      '아침에 눈떠서 가족들과 마주칠 때 유쾌한 하이파이브 인사 나누기',
+      '식사 시간에 엉뚱한 아재 개그나 수수께끼 하나씩 던지기',
+      '자기 전 오늘 하루 중 "가장 빵 터졌던 웃긴 순간" 이야기하며 잠들기'
+    ]
   },
-  rule_play: {
-    name: '전략적 승부와 지적 유희',
-    color: 'cyan',
+
+  connection: {
+    name: '정서적 유대와 가족사랑 (Connection & Kinship)',
+    badge: '가장 따뜻하게 품어주는 안식의 품',
+    philosophy: '사회적 성공이나 물질적 풍요보다도, 나와 연결된 이들과 깊은 눈을 맞추며 나누는 온기를 가장 귀하게 여기는 태도입니다. 인간은 누군가에게 온전히 사랑받고 사랑할 때 가장 강해집니다.',
     career: {
-      adult: '게임 밸런스 디자이너, 전략 컨설턴트, 프로 e스포츠 디렉터, 행동경제학 분석가',
-      child: '전략 시뮬레이션 게이머, 체스 그랜드마스터, 빅데이터 퍼즐 분석가'
+      adult: [
+        '가족 관계 회복을 돕는 전문 부부/가족 심리상담사',
+        '다정한 대화와 공감을 이끄는 시니어 케어 커뮤니티 매니저',
+        '이웃 간의 소통을 잇는 따뜻한 마을 사랑방 북카페 대표',
+        '가족의 역사와 추억을 책으로 엮어주는 패밀리 히스토리 저술가',
+        '따뜻한 홈메이드 식탁을 나누는 가정식 요리 연구가'
+      ],
+      child: [
+        '친구들의 고민을 따뜻하게 들어주는 또래 상담가/마음 치유사',
+        '가족과 사회의 행복을 연구하는 가족 사회학자',
+        '아픈 이들의 곁을 다정하게 지켜주는 소아과 간호사',
+        '사람들의 따뜻한 사연을 세상에 전하는 라디오 방송 작가',
+        '마을 사람들을 하나로 모으는 지역 축제 커뮤니티 기획자'
+      ]
     },
-    study: '게임 이론(Game Theory), 수학적 확률론, 역사 속 명장들의 군사 전략학',
-    hobby: '고난도 유로 보드게임 연구, 체스 수읽기 훈련, 방탈출 수수께끼 풀기',
-    play: '카탄/스플렌더 보드게임 리그전, 가족 암기 퀴즈 배틀, 스피드 핑퐁 매치',
-    travel: '세계 체스 챔피언십 개최 도시, 고대 미로 유적지 탐방, 첨단 인터랙티브 게임 박물관',
-    life: '주간 "나만의 작은 퀘스트 3개" 설정하고 완료 시 스스로에게 보상 주기'
+    study: [
+      '애착 이론과 존 보울비의 인간 관계 심리학',
+      '하버드 의대 성인발달연구의 85년 추적 연구: "좋은 관계가 삶을 완성한다"',
+      '가족 시스템 이론(Family Systems Theory)과 세대 간 소통법',
+      '경청과 공감의 기술(Active Listening & Empathy)',
+      '따뜻한 문학 작품과 가족 서사 소설 깊이 읽기'
+    ],
+    hobby: [
+      '온 가족이 함께하는 주말 베이킹 및 홈메이드 만두 빚기',
+      '가족 포토북 앨범을 손수 꾸미고 손글씨로 추억 기록하기',
+      '가족들의 기념일마다 손편지와 캘리그래피 카드 써주기',
+      '가족 산책로를 나란히 걸으며 지난 한 주 동안의 속마음 나누기',
+      '서로의 어깨를 주물러주는 따뜻한 아로마 오일 마사지 나누기'
+    ],
+    play: [
+      '서로의 눈을 1분간 조용히 바라보며 미소 짓는 "아이 콘택트" 놀이',
+      '가족 하트 시그널 (질문에 대해 가족 4명이 동시에 같은 손동작 취하기)',
+      '등에 글씨 쓰고 무엇인지 맞추는 스킨십 퀴즈 놀이',
+      '가족 칭찬 샤워 (한 사람을 가운데 앉히고 나머지 가족들이 번갈아 안아주며 칭찬하기)',
+      '추억의 가족 옛날 비디오 함께 보며 팝콘 먹는 무비 나이트'
+    ],
+    travel: [
+      '한적한 호숫가 펜션에서 온 가족이 바비큐를 구워 먹는 글램핑 여행',
+      '외갓집이나 시골 고향 마을을 찾아 친지들과 함께하는 정겨운 시골 여행',
+      '바다를 바라보며 도란도란 손잡고 걷는 여수 밤바다 산책로',
+      '사계절의 변화를 함께 느끼는 아침고요수목원 가족 힐링 나들이',
+      '온 가족이 한방에 모여 잘 수 있는 따뜻한 온돌방이 있는 전통 고택'
+    ],
+    life: [
+      '아침에 집을 나설 때 서로를 꼭 안아주는 5초 포옹 리추얼',
+      '저녁 식사 자리에서 스마트폰을 바구니에 넣고 서로의 얼굴 보며 밥 먹기',
+      '하루 한 번 가족들에게 "사랑해, 고마워"를 쑥스러워하지 않고 말하기',
+      '가족 중 한 명이 지쳐 보일 때 따뜻한 차를 타서 건네는 작은 배려',
+      '잠들기 전 불 끄고 도란도란 누워 오늘 있었던 일 소곤소곤 나누기'
+    ]
   }
 };

@@ -16,7 +16,7 @@
   <!-- Pretendard Font -->
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 
-  <!-- 50개 심층 질문 & 6대 영역 데이터베이스 로드 -->
+  <!-- 50개 4지선다형 심층 질문 & 6대 영역 데이터베이스 로드 -->
   <script src="questions-data.js"></script>
 
   <script>
@@ -50,7 +50,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useMemo } = React;
+    const { useState, useEffect, useMemo } = React;
 
     const FAMILY_MEMBERS = [
       { id: 'father', name: '아빠', age: 45, role: '휴직 중 (삶의 2막 설계)', avatar: '🐻', bgColor: 'bg-amber-50', borderColor: 'border-amber-300', badge: '쉼과 새로운 도약' },
@@ -62,7 +62,25 @@
     function App() {
       const [view, setView] = useState('home');
       const [selectedCourseCount, setSelectedCourseCount] = useState(50);
-      
+
+      // 로컬 스토리지에 저장된 평가 이력 목록
+      const [savedHistory, setSavedHistory] = useState([]);
+      // 현재 조회 중인 저장된 결과 객체 (이력 보기 클릭 시)
+      const [viewingRecord, setViewingRecord] = useState(null);
+
+      // 로컬 스토리지 이력 불러오기
+      useEffect(() => {
+        try {
+          const raw = localStorage.getItem('argo_family_history');
+          if (raw) {
+            setSavedHistory(JSON.parse(raw));
+          }
+        } catch (e) {
+          console.error("이력 불러오기 실패:", e);
+        }
+      }, []);
+
+      // 활성화된 질문 목록 (10, 25, 50)
       const activeQuestions = useMemo(() => {
         if (selectedCourseCount === 10) {
           const sample = [];
@@ -91,21 +109,49 @@
 
       // 패밀리 릴레이 모드 상태
       const [familyRound, setFamilyRound] = useState(0);
-      const [familyTurn, setFamilyTurn] = useState(0); // 0: 아빠, 1: 엄마, 2: 아들, 3: 딸
+      const [familyTurn, setFamilyTurn] = useState(0);
       const [familyAnswers, setFamilyAnswers] = useState({});
       const [familyScores, setFamilyScores] = useState({ father: {}, mother: {}, son: {}, daughter: {} });
-      const [familyHistory, setFamilyHistory] = useState([]); // [{ round, turn, memberId, valueKey }]
+      const [familyHistory, setFamilyHistory] = useState([]);
 
-      // 솔로 시작
+      // 최다 득표 핵심 가치 도출 헬퍼
+      const getTopValue = (scores) => {
+        const entries = Object.entries(scores || {});
+        if (entries.length === 0) return 'autonomy';
+        entries.sort((a, b) => b[1] - a[1]);
+        return entries[0][0];
+      };
+
+      // 결과 저장 헬퍼
+      const saveRecord = (recordData) => {
+        try {
+          const updated = [recordData, ...savedHistory.slice(0, 29)]; // 최대 30개 보관
+          setSavedHistory(updated);
+          localStorage.setItem('argo_family_history', JSON.stringify(updated));
+        } catch (e) {
+          console.error("저장 실패:", e);
+        }
+      };
+
+      // 이력 삭제
+      const deleteRecord = (id, e) => {
+        e.stopPropagation();
+        const updated = savedHistory.filter(h => h.id !== id);
+        setSavedHistory(updated);
+        localStorage.setItem('argo_family_history', JSON.stringify(updated));
+      };
+
+      // 솔로 모드 시작
       const startSoloMode = (member) => {
         setSoloMember(member);
         setSoloStep(0);
         setSoloScores({});
         setSoloHistory([]);
+        setViewingRecord(null);
         setView('solo_play');
       };
 
-      // 솔로 답변 선택
+      // 솔로 4지선다 답변 선택
       const handleSoloChoice = (valueKey) => {
         const nextScores = { ...soloScores, [valueKey]: (soloScores[valueKey] || 0) + 1 };
         setSoloScores(nextScores);
@@ -114,18 +160,31 @@
         if (soloStep + 1 < activeQuestions.length) {
           setSoloStep(soloStep + 1);
         } else {
+          // 완료! 결과 저장
+          const topKey = getTopValue(nextScores);
+          const newRecord = {
+            id: 'solo_' + Date.now(),
+            type: 'solo',
+            date: new Date().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            member: soloMember,
+            courseCount: selectedCourseCount,
+            topKey,
+            scores: nextScores
+          };
+          saveRecord(newRecord);
+
           if (window.confetti) window.confetti({ particleCount: 100, spread: 80 });
+          setViewingRecord(null);
           setView('solo_result');
         }
       };
 
-      // 솔로 이전 질문으로 돌아가기
+      // 솔로 이전 질문 되돌리기
       const handleSoloPrev = () => {
         if (soloStep === 0 || soloHistory.length === 0) return;
         const lastEntry = soloHistory[soloHistory.length - 1];
         const updatedHistory = soloHistory.slice(0, -1);
         
-        // 점수 롤백
         const prevKey = lastEntry.valueKey;
         const updatedScores = { ...soloScores };
         if (updatedScores[prevKey] > 0) {
@@ -144,10 +203,11 @@
         setFamilyAnswers({});
         setFamilyScores({ father: {}, mother: {}, son: {}, daughter: {} });
         setFamilyHistory([]);
+        setViewingRecord(null);
         setView('family_play');
       };
 
-      // 패밀리 릴레이 답변 선택
+      // 패밀리 4지선다 답변 선택
       const handleFamilyChoice = (valueKey) => {
         const currentQ = activeQuestions[familyRound];
         const currentM = FAMILY_MEMBERS[familyTurn];
@@ -160,13 +220,11 @@
         const updatedFamilyAnswers = { ...familyAnswers, [currentQ.id]: updatedRound };
         setFamilyAnswers(updatedFamilyAnswers);
 
-        // 점수 누적
         const memberScore = familyScores[currentM.id] || {};
         const updatedMemberScore = { ...memberScore, [valueKey]: (memberScore[valueKey] || 0) + 1 };
         const nextScores = { ...familyScores, [currentM.id]: updatedMemberScore };
         setFamilyScores(nextScores);
 
-        // 히스토리 기록
         setFamilyHistory([...familyHistory, {
           round: familyRound,
           turn: familyTurn,
@@ -175,7 +233,6 @@
           valueKey
         }]);
 
-        // 다음 턴 결정
         if (familyTurn + 1 < FAMILY_MEMBERS.length) {
           setFamilyTurn(familyTurn + 1);
         } else {
@@ -183,50 +240,68 @@
             setFamilyRound(familyRound + 1);
             setFamilyTurn(0);
           } else {
+            // 패밀리 완료! 결과 저장
+            const familySummary = {};
+            FAMILY_MEMBERS.forEach(m => {
+              familySummary[m.id] = getTopValue(nextScores[m.id]);
+            });
+
+            const newRecord = {
+              id: 'family_' + Date.now(),
+              type: 'family',
+              date: new Date().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+              courseCount: selectedCourseCount,
+              familyScores: nextScores,
+              familySummary
+            };
+            saveRecord(newRecord);
+
             if (window.confetti) window.confetti({ particleCount: 120, spread: 100 });
+            setViewingRecord(null);
             setView('family_result');
           }
         }
       };
 
-      // 패밀리 이전 턴으로 돌아가기
+      // 패밀리 이전 턴 되돌리기
       const handleFamilyPrev = () => {
         if (familyHistory.length === 0) return;
         const lastEntry = familyHistory[familyHistory.length - 1];
         const updatedHistory = familyHistory.slice(0, -1);
 
-        // 점수 롤백
         const { memberId, questionId, valueKey, round, turn } = lastEntry;
         const memberScore = { ...familyScores[memberId] };
         if (memberScore[valueKey] > 0) {
           memberScore[valueKey] -= 1;
         }
-        const nextFamilyScores = { ...familyScores, [memberId]: memberScore };
-        setFamilyScores(nextFamilyScores);
+        setFamilyScores({ ...familyScores, [memberId]: memberScore });
 
-        // familyAnswers 롤백
         const updatedAnswers = { ...familyAnswers };
         if (updatedAnswers[questionId] && updatedAnswers[questionId][memberId]) {
           delete updatedAnswers[questionId][memberId];
         }
         setFamilyAnswers(updatedAnswers);
 
-        // 턴 및 라운드 복원
         setFamilyHistory(updatedHistory);
         setFamilyRound(round);
         setFamilyTurn(turn);
       };
 
-      // 최다 득표 핵심 가치 도출 헬퍼
-      const getTopValue = (scores) => {
-        const entries = Object.entries(scores);
-        if (entries.length === 0) return 'autonomy';
-        entries.sort((a, b) => b[1] - a[1]);
-        return entries[0][0];
+      // 저장된 이력 클릭하여 결과 다시보기
+      const openHistoryRecord = (record) => {
+        setViewingRecord(record);
+        if (record.type === 'solo') {
+          setSoloMember(record.member);
+          setSoloScores(record.scores);
+          setView('solo_result');
+        } else {
+          setFamilyScores(record.familyScores);
+          setView('family_result');
+        }
       };
 
       // ==========================================
-      // VIEW 1: HOME
+      // VIEW 1: HOME (메인 화면)
       // ==========================================
       if (view === 'home') {
         return (
@@ -249,8 +324,8 @@
               </h1>
               <p className="text-lg md:text-2xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
                 아빠의 쉼, 엄마의 새출발, 아이들의 무한한 성장! <br/>
-                진짜 내 마음을 움직이는 <strong>핵심 가치관</strong>을 50개의 심층 질문으로 정밀하게 찾고, <br className="hidden md:block"/>
-                <strong>직업 · 공부 · 취미 · 놀이 · 여행지 · 생활활동</strong> 6대 영역의 나침반을 세웁니다.
+                진짜 내 마음을 움직이는 <strong>핵심 가치관</strong>을 50개의 생생한 4지선다형 상황 질문으로 정밀하게 찾고, <br className="hidden md:block"/>
+                <strong>직업 · 공부 · 취미 · 놀이 · 여행지 · 생활활동</strong> 6대 영역의 구체적 경로를 만납니다.
               </p>
             </header>
 
@@ -266,6 +341,63 @@
               ))}
             </div>
 
+            {/* 저장된 가치관 진단 이력 보관소 */}
+            {savedHistory.length > 0 && (
+              <div className="bg-white border-2 border-indigo-200 rounded-3xl p-6 md:p-8 mb-10 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">📜</span>
+                    <h3 className="text-xl md:text-2xl font-black text-gray-900">저장된 가치관 진단 기록 보관소</h3>
+                  </div>
+                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+                    총 {savedHistory.length}개의 기록
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">
+                  이전에 진단했던 결과를 클릭하시면 언제든 6대 영역 추천서와 상세 평가 화면을 다시 열람할 수 있습니다.
+                </p>
+                <div className="grid md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2 custom-scroll">
+                  {savedHistory.map((rec) => {
+                    const topData = SIX_DIMENSIONS_RECOMMENDATIONS[rec.topKey] || SIX_DIMENSIONS_RECOMMENDATIONS.autonomy;
+                    return (
+                      <div
+                        key={rec.id}
+                        onClick={() => openHistoryRecord(rec)}
+                        className="p-4 bg-gray-50 hover:bg-indigo-50/70 border border-gray-200 hover:border-indigo-300 rounded-2xl cursor-pointer transition-all flex items-center justify-between group shadow-2xs"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">{rec.type === 'solo' ? rec.member?.avatar : '👨‍👩‍👧‍👦'}</span>
+                          <div>
+                            <div className="font-black text-base text-gray-900">
+                              {rec.type === 'solo' ? `${rec.member?.name}의 나침반` : '온 가족 릴레이 결과'}
+                              <span className="ml-2 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                                {rec.type === 'solo' ? topData.name.split(' ')[0] : '가족 헌장'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-400 mt-0.5">
+                              {rec.date} · {rec.courseCount}문항 완주
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                            결과 보기 ➜
+                          </span>
+                          <button
+                            onClick={(e) => deleteRecord(rec.id, e)}
+                            className="text-gray-300 hover:text-red-500 text-sm px-2 py-1 rounded hover:bg-white"
+                            title="기록 삭제"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* 질문 코스 선택 */}
             <div className="bg-white border-2 border-amber-200 rounded-3xl p-6 md:p-8 mb-10 shadow-sm">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
@@ -274,7 +406,7 @@
                   <h3 className="text-xl md:text-2xl font-black text-gray-900 mt-1">오늘 진행할 질문 코스를 선택해 주세요</h3>
                 </div>
                 <div className="inline-block px-3 py-1 bg-amber-50 text-amber-800 text-sm font-extrabold rounded-lg border border-amber-200">
-                  총 50개 심층 문항 탑재 · 이전 질문 되돌아가기 지원
+                  모든 문항 4지선다형 · 자동 저장 지원
                 </div>
               </div>
               <div className="grid md:grid-cols-3 gap-4">
@@ -313,7 +445,7 @@
               </div>
             </div>
 
-            {/* 2대 진행 방식 */}
+            {/* 2대 진행 방식 대형 카드 */}
             <div className="grid md:grid-cols-2 gap-8 mb-10">
               <div 
                 onClick={() => setView('solo_select')}
@@ -330,7 +462,7 @@
                     한 명씩 진행하는 <br/>솔로 심층 모드
                   </h3>
                   <p className="text-base md:text-lg text-gray-600 leading-relaxed mb-6">
-                    다른 사람 눈치 보지 않고, 조용한 시간에 오롯이 나의 내면을 마주합니다. 언제든 이전 질문으로 돌아가 생각을 수정할 수 있습니다.
+                    다른 사람 눈치 보지 않고, 4개의 다양한 선택지 중에서 내 마음에 가장 가까운 답을 고릅니다. 완료 시 결과가 자동으로 보관소에 저장됩니다.
                   </p>
                 </div>
                 <button className="w-full py-4 px-6 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-lg md:text-xl rounded-2xl shadow-sm transition-colors flex items-center justify-center gap-2">
@@ -354,7 +486,7 @@
                     네 명이 번갈아 하는 <br/>패밀리 릴레이 모드
                   </h3>
                   <p className="text-base md:text-lg text-gray-600 leading-relaxed mb-6">
-                    식탁이나 거실에 모여 한 화면으로 턴을 넘기며 진행합니다! 앞사람이 잘못 눌렀다면 언제든 이전 턴으로 돌아가 다시 선택할 수 있습니다.
+                    식탁이나 거실에 모여 한 화면으로 턴을 넘기며 4지선다형 시나리오에 답합니다! 서로의 답변 차이를 보며 대화하고 온 가족 헌장을 완성합니다.
                   </p>
                 </div>
                 <button className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-lg md:text-xl rounded-2xl shadow-sm transition-colors flex items-center justify-center gap-2">
@@ -365,14 +497,14 @@
             </div>
 
             <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-6 text-center text-sm md:text-base text-gray-600">
-              💡 <strong>추천 영역</strong>: 직업(Career), 공부(Study), 취미(Hobby), <strong>놀이(Play)</strong>, 여행지(Travel), 생활활동(Life Rituals) 6대 영역 완비!
+              💡 <strong>업그레이드 완료</strong>: 4지선다형 중간 선택지 도입 · 질문 중복 제거 및 상황 시나리오 다양화 · 6대 영역별 5개 이상 구체 추천 목록 완비!
             </div>
           </div>
         );
       }
 
       // ==========================================
-      // VIEW 2: SOLO SELECT
+      // VIEW 2: SOLO SELECT (인물 선택)
       // ==========================================
       if (view === 'solo_select') {
         return (
@@ -389,7 +521,7 @@
                 오늘 깊은 사유의 여정을 떠날 주인공은 누구인가요?
               </h2>
               <p className="text-lg text-gray-600">
-                선택하신 분의 생애주기에 맞춤화된 6대 영역 추천이 도출됩니다.
+                선택하신 분의 생애주기에 맞춤화된 6대 영역(각 영역별 5개 이상의 구체적 리스트)이 도출됩니다.
               </p>
             </div>
 
@@ -419,15 +551,16 @@
       }
 
       // ==========================================
-      // VIEW 3: SOLO PLAY (이전 질문 버튼 포함)
+      // VIEW 3: SOLO PLAY (4지선다형 진행)
       // ==========================================
       if (view === 'solo_play') {
         const currentQ = activeQuestions[soloStep];
         const currentTheme = THEMES.find(t => t.id === currentQ.themeId);
+        const optionLabels = ['A', 'B', 'C', 'D'];
 
         return (
           <div className="max-w-3xl mx-auto px-6 py-12">
-            {/* 상단 프로필 및 진행률 바 + 이전 질문 버튼 */}
+            {/* 상단 프로필 및 진행률 바 */}
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
               <div className="flex items-center gap-3">
                 <span className="text-4xl">{soloMember.avatar}</span>
@@ -453,11 +586,10 @@
                 <span className="px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-black uppercase tracking-wider">
                   Q{soloStep + 1}. {currentQ.title}
                 </span>
-                {/* 상단 이전 질문 버튼 (첫 질문이 아닐 때) */}
                 {soloStep > 0 && (
                   <button
                     onClick={handleSoloPrev}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1 shadow-xs"
+                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs rounded-xl transition-all flex items-center gap-1 shadow-2xs"
                   >
                     <span>↺ 이전 질문으로</span>
                   </button>
@@ -468,45 +600,31 @@
                 {currentQ.question}
               </h2>
 
-              {/* 양자택일 버튼 2개 */}
-              <div className="space-y-5">
-                <button
-                  onClick={() => handleSoloChoice(currentQ.optionA.valueKey)}
-                  className="w-full text-left p-6 md:p-8 bg-amber-50/60 hover:bg-amber-100/90 border-2 border-amber-200 hover:border-amber-400 rounded-2xl transition-all shadow-xs hover:shadow-md group flex items-start gap-4"
-                >
-                  <span className="text-4xl shrink-0 group-hover:scale-110 transition-transform">
-                    {currentQ.optionA.emoji}
-                  </span>
-                  <div>
-                    <div className="text-xl md:text-2xl font-black text-gray-900 mb-2">
-                      {currentQ.optionA.title}
+              {/* 4지선다형 선택 버튼 4개 */}
+              <div className="space-y-4">
+                {currentQ.options.map((opt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSoloChoice(opt.valueKey)}
+                    className="w-full text-left p-5 md:p-6 bg-amber-50/40 hover:bg-amber-100/80 border-2 border-amber-200 hover:border-amber-400 rounded-2xl transition-all shadow-2xs hover:shadow-md group flex items-start gap-4"
+                  >
+                    <span className="w-8 h-8 rounded-xl bg-amber-500 text-white font-black flex items-center justify-center text-sm shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
+                      {optionLabels[idx]}
+                    </span>
+                    <div className="flex-1">
+                      <div className="text-base md:text-lg text-gray-800 leading-relaxed font-bold mb-1">
+                        {opt.text}
+                      </div>
+                      <div className="text-xs text-amber-800/80 font-semibold">
+                        💡 {opt.desc}
+                      </div>
                     </div>
-                    <div className="text-base md:text-lg text-gray-700 leading-relaxed font-medium">
-                      {currentQ.optionA.desc}
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => handleSoloChoice(currentQ.optionB.valueKey)}
-                  className="w-full text-left p-6 md:p-8 bg-indigo-50/60 hover:bg-indigo-100/90 border-2 border-indigo-200 hover:border-indigo-400 rounded-2xl transition-all shadow-xs hover:shadow-md group flex items-start gap-4"
-                >
-                  <span className="text-4xl shrink-0 group-hover:scale-110 transition-transform">
-                    {currentQ.optionB.emoji}
-                  </span>
-                  <div>
-                    <div className="text-xl md:text-2xl font-black text-gray-900 mb-2">
-                      {currentQ.optionB.title}
-                    </div>
-                    <div className="text-base md:text-lg text-gray-700 leading-relaxed font-medium">
-                      {currentQ.optionB.desc}
-                    </div>
-                  </div>
-                </button>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* 하단 이전 질문 안내 바 */}
+            {/* 하단 되돌아가기 바 */}
             <div className="flex items-center justify-between text-sm text-gray-500 px-2">
               {soloStep > 0 ? (
                 <button
@@ -525,12 +643,13 @@
       }
 
       // ==========================================
-      // VIEW 4: SOLO RESULT
+      // VIEW 4: SOLO RESULT (심층 철학 코멘트 + 6대 영역 5개 이상 추천)
       // ==========================================
       if (view === 'solo_result') {
-        const topKey = getTopValue(soloScores);
+        const topKey = viewingRecord?.topKey || getTopValue(soloScores);
         const topData = SIX_DIMENSIONS_RECOMMENDATIONS[topKey] || SIX_DIMENSIONS_RECOMMENDATIONS.autonomy;
-        const isAdult = soloMember.age >= 20;
+        const currentPerson = viewingRecord?.member || soloMember;
+        const isAdult = currentPerson.age >= 20;
 
         return (
           <div className="max-w-4xl mx-auto px-6 py-12">
@@ -541,141 +660,197 @@
               ← 메인으로 돌아가기
             </button>
 
-            <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white rounded-3xl p-8 md:p-12 shadow-xl mb-12 text-center">
-              <div className="text-6xl mb-4">{soloMember.avatar}</div>
+            {/* 상단 결과 배너 */}
+            <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white rounded-3xl p-8 md:p-12 shadow-xl mb-10 text-center">
+              <div className="text-6xl mb-4">{currentPerson.avatar}</div>
               <span className="px-4 py-1.5 bg-white/20 rounded-full font-black text-sm tracking-wider uppercase">
-                {soloMember.name}의 {selectedCourseCount}문항 정밀 분석 결과
+                {currentPerson.name}의 가치관 정밀 진단 결과서
               </span>
-              <h2 className="text-3xl md:text-5xl font-black mt-4 mb-4">
-                "{topData.name}"의 가치관으로 <br/>
-                세상을 항해하는 빛나는 나침반
+              <h2 className="text-3xl md:text-5xl font-black mt-4 mb-3">
+                "{topData.name}"
               </h2>
-              <p className="text-lg md:text-xl text-amber-100 max-w-2xl mx-auto leading-relaxed">
-                {soloMember.name}님이 가장 깊게 중요시하는 삶의 닻(Anchor)은 <br/>
-                <strong>"{topData.name}"</strong>에 뿌리를 두고 있습니다.
+              <div className="inline-block px-4 py-1 bg-white/30 rounded-full font-extrabold text-sm md:text-base text-white mb-4">
+                {topData.badge}
+              </div>
+            </div>
+
+            {/* 1. 심층 철학적 통찰 총평 코멘트 (3~4줄 깊은 사유) */}
+            <div className="bg-white border-2 border-amber-300 rounded-3xl p-8 shadow-sm mb-12">
+              <div className="flex items-center gap-2 text-amber-700 font-black text-lg mb-3">
+                <span>💭</span> {currentPerson.name}님을 위한 심층 인생 철학 총평
+              </div>
+              <p className="text-lg md:text-xl text-gray-800 leading-relaxed font-medium italic border-l-4 border-amber-500 pl-4 py-1">
+                "{topData.philosophy}"
+              </p>
+              <p className="text-base text-gray-600 mt-4 leading-relaxed">
+                {currentPerson.name}님의 내면 속에서 가장 강력하게 빛나는 가치는 <strong>{topData.name}</strong>입니다. 앞으로의 새로운 선택과 삶의 2막 설계에서 이 가치관을 나침반 삼을 때, 흔들리지 않는 자존감과 가슴 뛰는 활력을 얻게 될 것입니다.
               </p>
             </div>
 
+            {/* 2. 6대 영역 구체적 추천 (각 영역별 5개 이상 리스트) */}
             <div className="mb-12">
               <div className="text-center mb-8">
                 <span className="text-amber-600 font-extrabold text-base md:text-lg">VALUE-ALIGNED 6-DIMENSION BLUEPRINT</span>
                 <h3 className="text-3xl md:text-4xl font-black text-gray-900 mt-1">
-                  확인된 가치관에 맞춘 6대 영역 심층 제안서
+                  확인된 가치관에 맞춘 6대 영역 구체적 추천 리스트
                 </h3>
+                <p className="text-gray-500 text-sm mt-1">추상적인 설명에 그치지 않고, 손에 잡히는 구체적 실천 항목을 5가지씩 엄선해 드립니다.</p>
               </div>
 
-              <div className="space-y-6">
-                {/* 1. 직업 */}
+              <div className="space-y-8">
+                {/* 1. 직업 (5개 이상) */}
                 <div className="bg-white border-2 border-amber-200 rounded-3xl p-8 shadow-sm">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl font-bold">💼</div>
                     <div>
                       <span className="text-xs font-black text-amber-600 tracking-wide uppercase">DIMENSION 01</span>
-                      <h4 className="text-2xl font-black text-gray-900">직업 (Career & Vocation)</h4>
+                      <h4 className="text-2xl font-black text-gray-900">직업 & 소명 모델 (Career & Vocation)</h4>
                     </div>
                   </div>
-                  <div className="text-lg md:text-xl font-black text-amber-950 bg-amber-50 p-4 rounded-2xl border border-amber-200 mb-3 leading-relaxed">
-                    {isAdult ? topData.career.adult : topData.career.child}
+                  <p className="text-sm text-gray-500 mb-4">{currentPerson.name}님의 가치관을 온전히 발현할 수 있는 맞춤형 추천 직무/역할 5가지입니다:</p>
+                  <div className="space-y-3">
+                    {(isAdult ? topData.career.adult : topData.career.child).map((item, idx) => (
+                      <div key={idx} className="p-4 bg-amber-50/70 rounded-2xl border border-amber-200 flex items-start gap-3">
+                        <span className="w-7 h-7 rounded-xl bg-amber-500 text-white font-black text-sm flex items-center justify-center shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="text-base md:text-lg font-bold text-gray-900 leading-snug">
+                          {item}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                    {isAdult ? '생계를 위한 고용을 넘어, 나의 가치관과 온전히 정렬되는 소명형 일자리와 독립적 역할 모델입니다.' : '세상의 문제에 주도적으로 호기심을 품고 자신만의 해답을 찾아가는 미래 탐험가로 성장합니다.'}
-                  </p>
                 </div>
 
-                {/* 2. 공부 */}
+                {/* 2. 공부 (5개 이상) */}
                 <div className="bg-white border-2 border-sky-200 rounded-3xl p-8 shadow-sm">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center text-2xl font-bold">📚</div>
                     <div>
                       <span className="text-xs font-black text-sky-600 tracking-wide uppercase">DIMENSION 02</span>
-                      <h4 className="text-2xl font-black text-gray-900">공부 (Learning & Growth)</h4>
+                      <h4 className="text-2xl font-black text-gray-900">공부 & 지적 탐험 (Learning & Growth)</h4>
                     </div>
                   </div>
-                  <div className="text-lg md:text-xl font-black text-sky-950 bg-sky-50 p-4 rounded-2xl border border-sky-200 mb-3 leading-relaxed">
-                    {topData.study}
+                  <p className="text-sm text-gray-500 mb-4">시험용이 아닌 세계관을 넓혀줄 깊이 있는 배움의 분야 5가지입니다:</p>
+                  <div className="space-y-3">
+                    {topData.study.map((item, idx) => (
+                      <div key={idx} className="p-4 bg-sky-50/70 rounded-2xl border border-sky-200 flex items-start gap-3">
+                        <span className="w-7 h-7 rounded-xl bg-sky-500 text-white font-black text-sm flex items-center justify-center shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="text-base md:text-lg font-bold text-gray-900 leading-snug">
+                          {item}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                    단순 점수나 시험용 지식이 아닌, 나의 세계관을 깊고 넓게 확장하는 지적 모험입니다.
-                  </p>
                 </div>
 
-                {/* 3. 취미 */}
+                {/* 3. 취미 (5개 이상) */}
                 <div className="bg-white border-2 border-emerald-200 rounded-3xl p-8 shadow-sm">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl font-bold">🎨</div>
                     <div>
                       <span className="text-xs font-black text-emerald-600 tracking-wide uppercase">DIMENSION 03</span>
-                      <h4 className="text-2xl font-black text-gray-900">취미 (Hobbies & Flow)</h4>
+                      <h4 className="text-2xl font-black text-gray-900">취미 & 능동적 몰입 (Hobbies & Flow)</h4>
                     </div>
                   </div>
-                  <div className="text-lg md:text-xl font-black text-emerald-950 bg-emerald-50 p-4 rounded-2xl border border-emerald-200 mb-3 leading-relaxed">
-                    {topData.hobby}
+                  <p className="text-sm text-gray-500 mb-4">시간 감각을 잊고 깊은 에너지를 충전시켜 줄 몰입 취미 5가지입니다:</p>
+                  <div className="space-y-3">
+                    {topData.hobby.map((item, idx) => (
+                      <div key={idx} className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200 flex items-start gap-3">
+                        <span className="w-7 h-7 rounded-xl bg-emerald-500 text-white font-black text-sm flex items-center justify-center shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="text-base md:text-lg font-bold text-gray-900 leading-snug">
+                          {item}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                    수동적 소비가 아닌, 시간 가는 줄 모르고 손끝과 온몸의 감각을 깨우는 능동적 몰입(Flow) 활동입니다.
-                  </p>
                 </div>
 
-                {/* 4. 놀이 */}
+                {/* 4. 놀이 (5개 이상) */}
                 <div className="bg-white border-2 border-yellow-300 rounded-3xl p-8 shadow-sm">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-2xl bg-yellow-100 text-yellow-800 flex items-center justify-center text-2xl font-bold">🎲</div>
                     <div>
                       <span className="text-xs font-black text-yellow-700 tracking-wide uppercase">DIMENSION 04</span>
-                      <h4 className="text-2xl font-black text-gray-900">놀이 (Play & Joy)</h4>
+                      <h4 className="text-2xl font-black text-gray-900">놀이 & 유희 (Play & Joy)</h4>
                     </div>
                   </div>
-                  <div className="text-lg md:text-xl font-black text-yellow-950 bg-yellow-50 p-4 rounded-2xl border border-yellow-200 mb-3 leading-relaxed">
-                    {topData.play}
+                  <p className="text-sm text-gray-500 mb-4">어른에게는 굳은 마음을 녹이고 아이에게는 기쁨을 주는 순수 유희 5가지입니다:</p>
+                  <div className="space-y-3">
+                    {topData.play.map((item, idx) => (
+                      <div key={idx} className="p-4 bg-yellow-50/70 rounded-2xl border border-yellow-200 flex items-start gap-3">
+                        <span className="w-7 h-7 rounded-xl bg-yellow-500 text-white font-black text-sm flex items-center justify-center shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="text-base md:text-lg font-bold text-gray-900 leading-snug">
+                          {item}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                    어른에게는 굳어진 마음을 녹이는 동심을, 아이들에게는 무한한 상상력과 생명력을 불어넣는 순수한 유희의 시간입니다.
-                  </p>
                 </div>
 
-                {/* 5. 여행지 */}
+                {/* 5. 여행지 (5개 이상) */}
                 <div className="bg-white border-2 border-rose-200 rounded-3xl p-8 shadow-sm">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center text-2xl font-bold">🗺️</div>
                     <div>
                       <span className="text-xs font-black text-rose-600 tracking-wide uppercase">DIMENSION 05</span>
-                      <h4 className="text-2xl font-black text-gray-900">여행지 (Transformative Travel)</h4>
+                      <h4 className="text-2xl font-black text-gray-900">성찰의 여행지 (Transformative Travel)</h4>
                     </div>
                   </div>
-                  <div className="text-lg md:text-xl font-black text-rose-950 bg-rose-50 p-4 rounded-2xl border border-rose-200 mb-3 leading-relaxed">
-                    {topData.travel}
+                  <p className="text-sm text-gray-500 mb-4">일상의 기준점을 바꾸고 내면을 재설정해 줄 특별한 여행지 5곳입니다:</p>
+                  <div className="space-y-3">
+                    {topData.travel.map((item, idx) => (
+                      <div key={idx} className="p-4 bg-rose-50/70 rounded-2xl border border-rose-200 flex items-start gap-3">
+                        <span className="w-7 h-7 rounded-xl bg-rose-500 text-white font-black text-sm flex items-center justify-center shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="text-base md:text-lg font-bold text-gray-900 leading-snug">
+                          {item}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                    복잡한 관광지를 벗어나, 내면의 소리를 듣고 깊은 영감을 채울 수 있는 성찰과 치유의 공간입니다.
-                  </p>
                 </div>
 
-                {/* 6. 생활활동 */}
+                {/* 6. 생활활동 (5개 이상) */}
                 <div className="bg-white border-2 border-purple-200 rounded-3xl p-8 shadow-sm">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-2xl font-bold">☀️</div>
                     <div>
                       <span className="text-xs font-black text-purple-600 tracking-wide uppercase">DIMENSION 06</span>
-                      <h4 className="text-2xl font-black text-gray-900">생활활동 (Daily Rituals)</h4>
+                      <h4 className="text-2xl font-black text-gray-900">생활활동 & 리추얼 (Daily Rituals)</h4>
                     </div>
                   </div>
-                  <div className="text-lg md:text-xl font-black text-purple-950 bg-purple-50 p-4 rounded-2xl border border-purple-200 mb-3 leading-relaxed">
-                    {topData.life}
+                  <p className="text-sm text-gray-500 mb-4">하루하루를 단단하게 지탱해 줄 가치 정렬 마이크로 습관 5가지입니다:</p>
+                  <div className="space-y-3">
+                    {topData.life.map((item, idx) => (
+                      <div key={idx} className="p-4 bg-purple-50/70 rounded-2xl border border-purple-200 flex items-start gap-3">
+                        <span className="w-7 h-7 rounded-xl bg-purple-500 text-white font-black text-sm flex items-center justify-center shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="text-base md:text-lg font-bold text-gray-900 leading-snug">
+                          {item}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                    하루의 시작과 끝을 단단하게 지탱해 주는 작은 리추얼을 통해, 흔들리지 않는 삶의 균형을 유지합니다.
-                  </p>
                 </div>
               </div>
             </div>
 
             <div className="text-center py-6">
               <button 
-                onClick={() => setView('solo_select')}
+                onClick={() => setView('home')}
                 className="py-4 px-8 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xl rounded-2xl shadow-lg transition-colors inline-flex items-center gap-3"
               >
-                <span>다른 가족 멤버도 진행해보기</span>
-                <span>➜</span>
+                <span>메인 화면으로 돌아가기</span>
+                <span>🏠</span>
               </button>
             </div>
           </div>
@@ -683,13 +858,14 @@
       }
 
       // ==========================================
-      // VIEW 5: FAMILY PLAY (이전 턴 버튼 포함)
+      // VIEW 5: FAMILY PLAY (패밀리 4지선다형)
       // ==========================================
       if (view === 'family_play') {
         const currentQ = activeQuestions[familyRound];
         const currentM = FAMILY_MEMBERS[familyTurn];
         const currentTheme = THEMES.find(t => t.id === currentQ.themeId);
         const currentRoundAnswers = familyAnswers[currentQ.id] || {};
+        const optionLabels = ['A', 'B', 'C', 'D'];
 
         return (
           <div className="max-w-4xl mx-auto px-6 py-10">
@@ -723,12 +899,10 @@
                     );
                   })}
                 </div>
-                {/* 상단 이전 턴 버튼 */}
                 {familyHistory.length > 0 && (
                   <button
                     onClick={handleFamilyPrev}
-                    className="px-3 py-2 bg-indigo-800 hover:bg-indigo-700 text-indigo-100 rounded-xl text-xs font-black transition-all flex items-center gap-1 border border-indigo-600 shadow-xs"
-                    title="이전 가족 멤버 선택으로 돌아가기"
+                    className="px-3 py-2 bg-indigo-800 hover:bg-indigo-700 text-indigo-100 rounded-xl text-xs font-black transition-all flex items-center gap-1 border border-indigo-600 shadow-2xs"
                   >
                     <span>↺ 이전 턴</span>
                   </button>
@@ -760,51 +934,32 @@
                 {currentQ.familyTopic}
               </div>
 
-              {/* 양자택일 버튼 2개 */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <button
-                  onClick={() => handleFamilyChoice(currentQ.optionA.valueKey)}
-                  className="p-8 text-left bg-amber-50/70 hover:bg-amber-100 border-3 border-amber-200 hover:border-amber-500 rounded-2xl transition-all shadow-xs hover:shadow-md group flex flex-col justify-between"
-                >
-                  <div>
-                    <span className="text-5xl mb-4 block group-hover:scale-110 transition-transform">
-                      {currentQ.optionA.emoji}
-                    </span>
-                    <div className="text-2xl font-black text-gray-900 mb-2">
-                      {currentQ.optionA.title}
+              {/* 4지선다형 버튼 4개 */}
+              <div className="grid md:grid-cols-2 gap-4">
+                {currentQ.options.map((opt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleFamilyChoice(opt.valueKey)}
+                    className="p-6 text-left bg-indigo-50/40 hover:bg-indigo-100/80 border-2 border-indigo-200 hover:border-indigo-500 rounded-2xl transition-all shadow-2xs hover:shadow-md group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white font-black flex items-center justify-center text-sm mb-3 group-hover:scale-110 transition-transform">
+                        {optionLabels[idx]}
+                      </div>
+                      <div className="text-base md:text-lg text-gray-800 leading-relaxed font-bold mb-2">
+                        {opt.text}
+                      </div>
                     </div>
-                    <div className="text-base md:text-lg text-gray-700 leading-relaxed font-medium">
-                      {currentQ.optionA.desc}
+                    <div className="mt-4 pt-3 border-t border-indigo-100 text-xs font-extrabold text-indigo-700 flex items-center justify-between">
+                      <span>{opt.desc}</span>
+                      <span>{currentM.name}의 선택 ➜</span>
                     </div>
-                  </div>
-                  <div className="mt-6 pt-4 border-t border-amber-200/60 text-amber-800 font-black text-base flex items-center gap-1">
-                    <span>{currentM.name}의 선택</span> <span>➜</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => handleFamilyChoice(currentQ.optionB.valueKey)}
-                  className="p-8 text-left bg-indigo-50/70 hover:bg-indigo-100 border-3 border-indigo-200 hover:border-indigo-500 rounded-2xl transition-all shadow-xs hover:shadow-md group flex flex-col justify-between"
-                >
-                  <div>
-                    <span className="text-5xl mb-4 block group-hover:scale-110 transition-transform">
-                      {currentQ.optionB.emoji}
-                    </span>
-                    <div className="text-2xl font-black text-gray-900 mb-2">
-                      {currentQ.optionB.title}
-                    </div>
-                    <div className="text-base md:text-lg text-gray-700 leading-relaxed font-medium">
-                      {currentQ.optionB.desc}
-                    </div>
-                  </div>
-                  <div className="mt-6 pt-4 border-t border-indigo-200/60 text-indigo-800 font-black text-base flex items-center gap-1">
-                    <span>{currentM.name}의 선택</span> <span>➜</span>
-                  </div>
-                </button>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* 하단 이전 턴 되돌리기 안내 바 */}
+            {/* 하단 되돌리기 */}
             <div className="flex items-center justify-between text-sm text-gray-500 px-2 mb-6">
               {familyHistory.length > 0 ? (
                 <button
@@ -827,12 +982,13 @@
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {FAMILY_MEMBERS.map(m => {
                   const ans = currentRoundAnswers[m.id];
+                  const ansData = ans ? SIX_DIMENSIONS_RECOMMENDATIONS[ans.valueKey] : null;
                   return (
-                    <div key={m.id} className="p-4 bg-white rounded-xl border border-gray-200 text-center shadow-xs">
+                    <div key={m.id} className="p-4 bg-white rounded-xl border border-gray-200 text-center shadow-2xs">
                       <div className="text-3xl mb-1">{m.avatar}</div>
                       <div className="font-black text-gray-900">{m.name}</div>
                       <div className="text-xs font-black text-indigo-600 mt-1">
-                        {ans ? SIX_DIMENSIONS_RECOMMENDATIONS[ans.valueKey]?.name : '생각 중... 💭'}
+                        {ansData ? ansData.name.split(' ')[0] : '생각 중... 💭'}
                       </div>
                     </div>
                   );
@@ -844,9 +1000,11 @@
       }
 
       // ==========================================
-      // VIEW 6: FAMILY RESULT
+      // VIEW 6: FAMILY RESULT (패밀리 결과)
       // ==========================================
       if (view === 'family_result') {
+        const currentScores = viewingRecord?.familyScores || familyScores;
+
         return (
           <div className="max-w-4xl mx-auto px-6 py-12">
             <button 
@@ -856,19 +1014,19 @@
               ← 메인으로 돌아가기
             </button>
 
-            <div className="bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-600 text-white rounded-3xl p-8 md:p-12 shadow-2xl mb-12 text-center">
+            <div className="bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-600 text-white rounded-3xl p-8 md:p-12 shadow-2xl mb-10 text-center">
               <div className="flex justify-center gap-3 text-5xl md:text-6xl mb-4">
                 <span>🐻</span><span>🦊</span><span>🐿️</span><span>🐰</span>
               </div>
               <span className="px-4 py-1.5 bg-white/20 rounded-full font-black text-sm tracking-wider uppercase">
-                {selectedCourseCount}문항 완주 · FAMILY SYNERGY COMPASS
+                {viewingRecord ? `${viewingRecord.date} 기록 조회` : `${selectedCourseCount}문항 완주`} · FAMILY SYNERGY COMPASS
               </span>
               <h2 className="text-3xl md:text-5xl font-black mt-4 mb-4">
                 우리 가족 가치관 나침반 & 삶의 헌장 완성!
               </h2>
               <p className="text-lg md:text-xl text-purple-100 max-w-2xl mx-auto leading-relaxed">
                 서로의 다른 가치를 확인하고, 깊이 공감한 이 시간이야말로 <br/>
-                새로운 인생 2막을 여는 가장 든든한 밑거름입니다.
+                새로운 인생 2막을 여는 가장 든든한 밑거름입니다. (보관소에 자동 저장 완료)
               </p>
             </div>
 
@@ -879,14 +1037,17 @@
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {FAMILY_MEMBERS.map(m => {
-                  const mTopKey = getTopValue(familyScores[m.id]);
+                  const mTopKey = getTopValue(currentScores[m.id]);
                   const mTopData = SIX_DIMENSIONS_RECOMMENDATIONS[mTopKey] || SIX_DIMENSIONS_RECOMMENDATIONS.autonomy;
                   return (
                     <div key={m.id} className="p-5 bg-indigo-50/60 rounded-2xl border border-indigo-200 text-center">
                       <div className="text-4xl mb-2">{m.avatar}</div>
                       <div className="font-black text-xl text-gray-900">{m.name}</div>
                       <div className="text-sm font-black text-indigo-700 mt-2 px-3 py-1 bg-white rounded-full border border-indigo-200">
-                        {mTopData.name}
+                        {mTopData.name.split(' ')[0]}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-2 line-clamp-2">
+                        {mTopData.badge}
                       </div>
                     </div>
                   );
@@ -903,56 +1064,17 @@
                 </h3>
               </div>
               <div className="space-y-4 max-w-2xl mx-auto text-lg md:text-xl text-gray-800 leading-relaxed font-medium">
-                <div className="p-4 bg-white/90 rounded-2xl shadow-xs border border-amber-200 flex items-start gap-3">
+                <div className="p-4 bg-white/90 rounded-2xl shadow-2xs border border-amber-200 flex items-start gap-3">
                   <span className="text-amber-700 font-bold text-2xl">1.</span>
                   <span><strong>각자의 속도와 자유를 존중합니다:</strong> 아빠의 쉼, 엄마의 새출발, 아이들의 성장을 재촉하지 않고 온전히 지지합니다.</span>
                 </div>
-                <div className="p-4 bg-white/90 rounded-2xl shadow-xs border border-amber-200 flex items-start gap-3">
+                <div className="p-4 bg-white/90 rounded-2xl shadow-2xs border border-amber-200 flex items-start gap-3">
                   <span className="text-amber-700 font-bold text-2xl">2.</span>
                   <span><strong>두근거리는 도전을 격려합니다:</strong> 실패를 두려워하지 않고, 새로운 취미·공부·놀이의 호기심을 활짝 열어줍니다.</span>
                 </div>
-                <div className="p-4 bg-white/90 rounded-2xl shadow-xs border border-amber-200 flex items-start gap-3">
+                <div className="p-4 bg-white/90 rounded-2xl shadow-2xs border border-amber-200 flex items-start gap-3">
                   <span className="text-amber-700 font-bold text-2xl">3.</span>
                   <span><strong>매일 15분 마음을 나눕니다:</strong> 저녁 식탁에서 오늘 감사했던 일과 호기심을 나누며 서로의 가장 따뜻한 울타리가 되어줍니다.</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 6대 버킷 프로젝트 */}
-            <div className="bg-white border-2 border-purple-200 rounded-3xl p-8 shadow-sm mb-12">
-              <h3 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2">
-                <span>✨</span> 온 가족 6대 버킷 프로젝트
-              </h3>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="p-5 bg-amber-50 rounded-2xl border border-amber-200">
-                  <span className="text-3xl mb-1 block">💼</span>
-                  <div className="font-black text-lg text-amber-950 mb-1">가족 팝업 스토어</div>
-                  <p className="text-xs text-gray-600">역할을 나누어 온라인 굿즈 펀딩 해보기</p>
-                </div>
-                <div className="p-5 bg-sky-50 rounded-2xl border border-sky-200">
-                  <span className="text-3xl mb-1 block">📚</span>
-                  <div className="font-black text-lg text-sky-950 mb-1">주말 인문학 살롱</div>
-                  <p className="text-xs text-gray-600">명작 영화/책 함께 보고 맛있는 간식 토론</p>
-                </div>
-                <div className="p-5 bg-emerald-50 rounded-2xl border border-emerald-200">
-                  <span className="text-3xl mb-1 block">🎨</span>
-                  <div className="font-black text-lg text-emerald-950 mb-1">온 가족 협동 목공</div>
-                  <p className="text-xs text-gray-600">거실 작은 테이블이나 문패 직접 깎기</p>
-                </div>
-                <div className="p-5 bg-yellow-50 rounded-2xl border border-yellow-200">
-                  <span className="text-3xl mb-1 block">🎲</span>
-                  <div className="font-black text-lg text-yellow-950 mb-1">가족 보드게임 리그</div>
-                  <p className="text-xs text-gray-600">주말 밤 간식을 걸고 펼치는 유쾌한 게임 배틀</p>
-                </div>
-                <div className="p-5 bg-rose-50 rounded-2xl border border-rose-200">
-                  <span className="text-3xl mb-1 block">🗺️</span>
-                  <div className="font-black text-lg text-rose-950 mb-1">제주 올레길 트레킹</div>
-                  <p className="text-xs text-gray-600">바다와 바람을 맞으며 걷는 3박 4일 치유 여정</p>
-                </div>
-                <div className="p-5 bg-purple-50 rounded-2xl border border-purple-200">
-                  <span className="text-3xl mb-1 block">☀️</span>
-                  <div className="font-black text-lg text-purple-950 mb-1">저녁 15분 하트 타임</div>
-                  <p className="text-xs text-gray-600">오늘의 감사 1가지와 서로를 칭찬하는 습관</p>
                 </div>
               </div>
             </div>
@@ -962,7 +1084,7 @@
                 onClick={() => setView('home')}
                 className="py-4 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xl rounded-2xl shadow-lg transition-colors inline-flex items-center gap-3"
               >
-                <span>처음 화면으로 돌아가기</span>
+                <span>메인 화면으로 돌아가기</span>
                 <span>🏠</span>
               </button>
             </div>
