@@ -66,10 +66,7 @@
     ];
 
     function MobileApp() {
-      // 탭: 'home', 'solo', 'family', 'charter'
       const [currentTab, setCurrentTab] = useState('home');
-
-      // 코스 선택: 10, 25, 50
       const [courseCount, setCourseCount] = useState(50);
 
       const activeQuestions = useMemo(() => {
@@ -96,17 +93,19 @@
       const [soloMember, setSoloMember] = useState(FAMILY_MEMBERS[0]);
       const [soloStep, setSoloStep] = useState(0);
       const [soloScores, setSoloScores] = useState({});
+      const [soloHistory, setSoloHistory] = useState([]); // [{ step, valueKey }]
       const [soloFinished, setSoloFinished] = useState(false);
-      const [activeRecoTab, setActiveRecoTab] = useState('career'); // career, study, hobby, play, travel, life
+      const [activeRecoTab, setActiveRecoTab] = useState('career');
 
       // 패밀리 릴레이 모드 상태
       const [familyRound, setFamilyRound] = useState(0);
       const [familyTurn, setFamilyTurn] = useState(0);
       const [familyScores, setFamilyScores] = useState({ father: {}, mother: {}, son: {}, daughter: {} });
+      const [familyHistory, setFamilyHistory] = useState([]); // [{ round, turn, memberId, valueKey }]
       const [familyFinished, setFamilyFinished] = useState(false);
       const [showPassModal, setShowPassModal] = useState(false);
 
-      // 오늘의 가치 질문 한 입 (접근성)
+      // 오늘의 가치 질문 한 입
       const [dailyBiteIndex, setDailyBiteIndex] = useState(0);
       const dailyQuestions = [
         "오늘 하루 중 가장 가슴이 편안했던 순간은 언제였나요?",
@@ -115,7 +114,7 @@
         "어릴 때 시간 가는 줄 모르고 놀았던 놀이는 무엇이었나요?"
       ];
 
-      // 최다 득표 가치 도출
+      // 최다 득표 가치
       const getTopValue = (scores) => {
         const entries = Object.entries(scores);
         if (entries.length === 0) return 'autonomy';
@@ -127,6 +126,7 @@
       const handleSoloChoice = (valueKey) => {
         const nextScores = { ...soloScores, [valueKey]: (soloScores[valueKey] || 0) + 1 };
         setSoloScores(nextScores);
+        setSoloHistory([...soloHistory, { step: soloStep, valueKey }]);
 
         if (soloStep + 1 < activeQuestions.length) {
           setSoloStep(soloStep + 1);
@@ -136,12 +136,37 @@
         }
       };
 
+      // 솔로 이전 질문 되돌리기
+      const handleSoloPrev = () => {
+        if (soloStep === 0 || soloHistory.length === 0) return;
+        const lastEntry = soloHistory[soloHistory.length - 1];
+        const updatedHistory = soloHistory.slice(0, -1);
+
+        const prevKey = lastEntry.valueKey;
+        const updatedScores = { ...soloScores };
+        if (updatedScores[prevKey] > 0) {
+          updatedScores[prevKey] -= 1;
+        }
+
+        setSoloScores(updatedScores);
+        setSoloHistory(updatedHistory);
+        setSoloStep(soloStep - 1);
+      };
+
       // 패밀리 릴레이 선택
       const handleFamilyChoice = (valueKey) => {
         const currentM = FAMILY_MEMBERS[familyTurn];
         const mScore = familyScores[currentM.id] || {};
         const updatedScore = { ...mScore, [valueKey]: (mScore[valueKey] || 0) + 1 };
         setFamilyScores({ ...familyScores, [currentM.id]: updatedScore });
+
+        // 히스토리 추가
+        setFamilyHistory([...familyHistory, {
+          round: familyRound,
+          turn: familyTurn,
+          memberId: currentM.id,
+          valueKey
+        }]);
 
         if (familyTurn + 1 < FAMILY_MEMBERS.length) {
           setFamilyTurn(familyTurn + 1);
@@ -156,6 +181,24 @@
             if (window.confetti) window.confetti({ particleCount: 100, spread: 80 });
           }
         }
+      };
+
+      // 패밀리 릴레이 이전 턴 되돌리기
+      const handleFamilyPrev = () => {
+        if (familyHistory.length === 0) return;
+        const lastEntry = familyHistory[familyHistory.length - 1];
+        const updatedHistory = familyHistory.slice(0, -1);
+
+        const { memberId, valueKey, round, turn } = lastEntry;
+        const mScore = { ...familyScores[memberId] };
+        if (mScore[valueKey] > 0) {
+          mScore[valueKey] -= 1;
+        }
+        setFamilyScores({ ...familyScores, [memberId]: mScore });
+
+        setFamilyHistory(updatedHistory);
+        setFamilyRound(round);
+        setFamilyTurn(turn);
       };
 
       return (
@@ -180,7 +223,6 @@
             {/* -------------------- [TAB 1: HOME] -------------------- */}
             {currentTab === 'home' && (
               <div className="space-y-6">
-                {/* 상단 웰컴 배너 */}
                 <div className="bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 text-white rounded-3xl p-6 shadow-md">
                   <span className="text-xs font-black uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full">
                     50 DEEP DILEMMAS & 6 DIMENSIONS
@@ -194,7 +236,7 @@
                   </p>
                 </div>
 
-                {/* 오늘의 생각 한 입 위젯 */}
+                {/* 오늘의 생각 한 입 */}
                 <div className="bg-white border-2 border-amber-200 rounded-2xl p-4 shadow-xs">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-black text-amber-600 flex items-center gap-1">
@@ -212,7 +254,7 @@
                   </p>
                 </div>
 
-                {/* 질문 분량 선택 (10 / 25 / 50) */}
+                {/* 질문 분량 선택 */}
                 <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-xs">
                   <div className="text-xs font-black text-gray-500 mb-2">질문 코스 선택</div>
                   <div className="grid grid-cols-3 gap-2">
@@ -235,7 +277,7 @@
                   </div>
                 </div>
 
-                {/* 4인 가족 상태 바텀 */}
+                {/* 4인 프로필 */}
                 <div>
                   <h2 className="text-xs font-bold text-gray-400 mb-2 px-1">우리 가족 4인 프로필</h2>
                   <div className="grid grid-cols-2 gap-2.5">
@@ -251,10 +293,10 @@
                   </div>
                 </div>
 
-                {/* 두 가지 모드 실행 버튼 */}
+                {/* 모드 실행 버튼 2개 */}
                 <div className="space-y-3 pt-1">
                   <button
-                    onClick={() => { setCurrentTab('solo'); setSoloFinished(false); setSoloStep(0); setSoloScores({}); }}
+                    onClick={() => { setCurrentTab('solo'); setSoloFinished(false); setSoloStep(0); setSoloScores({}); setSoloHistory([]); }}
                     className="w-full text-left p-4 bg-white border-2 border-amber-300 active:border-amber-500 rounded-2xl shadow-xs flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
@@ -264,13 +306,14 @@
                       <div>
                         <span className="text-[11px] font-black text-amber-700">모드 1. 혼자 깊이 생각하기</span>
                         <div className="text-lg font-black text-gray-900">솔로 심층 모드 ({courseCount}문항)</div>
+                        <div className="text-[11px] text-gray-500 mt-0.5">언제든 이전 질문으로 되돌아갈 수 있어요</div>
                       </div>
                     </div>
                     <span className="text-lg text-amber-500 font-bold">➜</span>
                   </button>
 
                   <button
-                    onClick={() => { setCurrentTab('family'); setFamilyFinished(false); setFamilyRound(0); setFamilyTurn(0); setFamilyScores({ father: {}, mother: {}, son: {}, daughter: {} }); }}
+                    onClick={() => { setCurrentTab('family'); setFamilyFinished(false); setFamilyRound(0); setFamilyTurn(0); setFamilyScores({ father: {}, mother: {}, son: {}, daughter: {} }); setFamilyHistory([]); }}
                     className="w-full text-left p-4 bg-white border-2 border-indigo-300 active:border-indigo-500 rounded-2xl shadow-xs flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
@@ -280,6 +323,7 @@
                       <div>
                         <span className="text-[11px] font-black text-indigo-700">모드 2. 폰 넘겨가며 대화하기</span>
                         <div className="text-lg font-black text-gray-900">패밀리 릴레이 모드 ({courseCount}문항)</div>
+                        <div className="text-[11px] text-gray-500 mt-0.5">실수했을 때 이전 턴으로 되돌아가기 지원</div>
                       </div>
                     </div>
                     <span className="text-lg text-indigo-500 font-bold">➜</span>
@@ -298,7 +342,7 @@
                       {FAMILY_MEMBERS.map(m => (
                         <button
                           key={m.id}
-                          onClick={() => { setSoloMember(m); setSoloStep(0); setSoloScores({}); }}
+                          onClick={() => { setSoloMember(m); setSoloStep(0); setSoloScores({}); setSoloHistory([]); }}
                           className={`px-3 py-1.5 rounded-full text-xs font-black flex items-center gap-1 shrink-0 ${
                             soloMember.id === m.id ? 'bg-amber-500 text-white shadow-xs' : 'bg-white border border-gray-200 text-gray-600'
                           }`}
@@ -309,9 +353,19 @@
                       ))}
                     </div>
 
-                    {/* 진행률 바 */}
+                    {/* 진행률 바 & 이전 질문 버튼 */}
                     <div className="flex items-center justify-between text-xs font-bold text-gray-400">
-                      <span>{soloMember.name}의 가치관 탐험</span>
+                      <div className="flex items-center gap-2">
+                        <span>{soloMember.name}의 가치관</span>
+                        {soloStep > 0 && (
+                          <button
+                            onClick={handleSoloPrev}
+                            className="text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md font-black flex items-center gap-0.5 active:bg-amber-200"
+                          >
+                            <span>↺ 이전 질문</span>
+                          </button>
+                        )}
+                      </div>
                       <span className="text-amber-600 font-black">{soloStep + 1} / {activeQuestions.length}</span>
                     </div>
                     <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -323,9 +377,20 @@
 
                     {/* 1문항 1스크린 대형 질문 카드 */}
                     <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-xs">
-                      <span className="text-xs font-black text-amber-600 uppercase">
-                        Q{soloStep + 1}. {activeQuestions[soloStep].title}
-                      </span>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-black text-amber-600 uppercase">
+                          Q{soloStep + 1}. {activeQuestions[soloStep].title}
+                        </span>
+                        {soloStep > 0 && (
+                          <button
+                            onClick={handleSoloPrev}
+                            className="text-[11px] text-gray-400 hover:text-amber-700 font-bold"
+                          >
+                            ↺ 이전 질문으로 돌아가기
+                          </button>
+                        )}
+                      </div>
+
                       <h3 className="text-lg font-black text-gray-900 mt-1 mb-5 leading-snug">
                         {activeQuestions[soloStep].question}
                       </h3>
@@ -365,7 +430,7 @@
                     </div>
                   </div>
                 ) : (
-                  /* 솔로 모드 완료 화면 (6대 영역) */
+                  /* 솔로 완료 */
                   <div className="space-y-5">
                     {(() => {
                       const topKey = getTopValue(soloScores);
@@ -382,14 +447,14 @@
                             </div>
                           </div>
 
-                          {/* 6대 영역 서브 탭 (놀이 포함) */}
+                          {/* 6대 영역 서브 탭 */}
                           <div>
                             <div className="flex gap-1.5 overflow-x-auto pb-2 custom-scroll">
                               {[
                                 { id: 'career', label: '💼 직업' },
                                 { id: 'study', label: '📚 공부' },
                                 { id: 'hobby', label: '🎨 취미' },
-                                { id: 'play', label: '🎲 놀이 (신규!)' },
+                                { id: 'play', label: '🎲 놀이' },
                                 { id: 'travel', label: '🗺️ 여행지' },
                                 { id: 'life', label: '☀️ 생활활동' }
                               ].map(t => (
@@ -487,7 +552,7 @@
                           </div>
 
                           <button
-                            onClick={() => { setSoloFinished(false); setSoloStep(0); setSoloScores({}); }}
+                            onClick={() => { setSoloFinished(false); setSoloStep(0); setSoloScores({}); setSoloHistory([]); }}
                             className="w-full py-4 bg-amber-500 active:bg-amber-600 text-white font-black text-base rounded-2xl shadow-xs"
                           >
                             다시 진행하기 / 다른 가족 하기
@@ -505,14 +570,24 @@
               <div>
                 {!familyFinished ? (
                   <div className="space-y-4">
-                    {/* 상단 턴 안내 배너 */}
+                    {/* 상단 턴 안내 배너 & 이전 턴 버튼 */}
                     <div className="bg-indigo-900 text-white rounded-3xl p-5 shadow-xs flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className="text-4xl animate-bounce">{FAMILY_MEMBERS[familyTurn].avatar}</span>
                         <div>
-                          <span className="text-xs font-bold text-indigo-300">
-                            Q{familyRound + 1} / {activeQuestions.length} · {FAMILY_MEMBERS[familyTurn].name}의 턴
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-indigo-300">
+                              Q{familyRound + 1} · {FAMILY_MEMBERS[familyTurn].name}의 턴
+                            </span>
+                            {familyHistory.length > 0 && (
+                              <button
+                                onClick={handleFamilyPrev}
+                                className="text-[10px] bg-indigo-700 px-1.5 py-0.5 rounded text-amber-300 font-black"
+                              >
+                                ↺ 이전 턴
+                              </button>
+                            )}
+                          </div>
                           <div className="text-lg font-black text-amber-300">
                             스마트폰을 탭해주세요!
                           </div>
@@ -534,14 +609,24 @@
 
                     {/* 라운드 딜레마 카드 */}
                     <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-xs">
-                      <span className="text-xs font-black text-indigo-600">
-                        {activeQuestions[familyRound].title}
-                      </span>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-black text-indigo-600">
+                          {activeQuestions[familyRound].title}
+                        </span>
+                        {familyHistory.length > 0 && (
+                          <button
+                            onClick={handleFamilyPrev}
+                            className="text-[11px] text-gray-400 hover:text-indigo-600 font-bold"
+                          >
+                            ↺ 이전 가족 턴으로
+                          </button>
+                        )}
+                      </div>
+
                       <h3 className="text-lg font-black text-gray-900 mt-1 mb-2 leading-snug">
                         {activeQuestions[familyRound].question}
                       </h3>
                       
-                      {/* 가족 대화 힌트 */}
                       <div className="p-3 bg-indigo-50 rounded-xl text-xs font-bold text-indigo-900 mb-5 leading-relaxed">
                         {activeQuestions[familyRound].familyTopic}
                       </div>
@@ -569,7 +654,7 @@
                     </div>
                   </div>
                 ) : (
-                  /* 패밀리 완료 화면 */
+                  /* 패밀리 완료 */
                   <div className="space-y-5">
                     <div className="bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-600 text-white rounded-3xl p-6 text-center shadow-md">
                       <div className="text-4xl mb-2">🐻 🦊 🐿️ 🐰</div>
@@ -646,7 +731,7 @@
                       <strong>🎨 온 가족 협동 목공:</strong> 거실 테이블이나 가족 문패 깎기
                     </div>
                     <div className="p-2.5 bg-yellow-50 rounded-xl border border-yellow-200 font-bold text-yellow-950">
-                      <strong>🎲 가족 보드게임 리그 (신규):</strong> 주말 간식 내기 리그전
+                      <strong>🎲 가족 보드게임 리그:</strong> 주말 간식 내기 리그전
                     </div>
                     <div className="p-2.5 bg-rose-50 rounded-xl border border-rose-200">
                       <strong>🗺️ 제주 올레길 트레킹:</strong> 바다 바람을 맞으며 걷는 3박 4일
@@ -672,12 +757,22 @@
                 <p className="text-xs text-gray-500 mb-5">
                   {FAMILY_MEMBERS[familyTurn].name}의 생각을 들을 차례입니다 💭
                 </p>
-                <button
-                  onClick={() => setShowPassModal(false)}
-                  className="w-full py-3 bg-amber-500 active:bg-amber-600 text-white font-black text-sm rounded-xl shadow-xs"
-                >
-                  준비 완료! 시작하기 ➜
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setShowPassModal(false)}
+                    className="w-full py-3 bg-amber-500 active:bg-amber-600 text-white font-black text-sm rounded-xl shadow-xs"
+                  >
+                    준비 완료! 시작하기 ➜
+                  </button>
+                  {familyHistory.length > 0 && (
+                    <button
+                      onClick={() => { setShowPassModal(false); handleFamilyPrev(); }}
+                      className="w-full py-2 bg-gray-100 active:bg-gray-200 text-gray-600 font-bold text-xs rounded-xl"
+                    >
+                      ↺ 방금 전 사람 다시 선택하기
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
