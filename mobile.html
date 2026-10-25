@@ -70,7 +70,7 @@
 
     function MobileApp() {
       const [currentTab, setCurrentTab] = useState('home'); // 'home', 'solo', 'family', 'charter'
-      const [courseCount, setCourseCount] = useState(50);
+      const [courseCount, setCourseCount] = useState(30);
 
       // 로컬 스토리지 이력
       const [savedHistory, setSavedHistory] = useState([]);
@@ -102,25 +102,9 @@
         localStorage.setItem('argo_family_history', JSON.stringify(updated));
       };
 
-      const activeQuestions = useMemo(() => {
-        if (courseCount === 10) {
-          const sample = [];
-          for (let i = 0; i < 5; i++) {
-            sample.push(FIFTY_DILEMMAS[i * 10]);
-            sample.push(FIFTY_DILEMMAS[i * 10 + 4]);
-          }
-          return sample;
-        } else if (courseCount === 25) {
-          const sample = [];
-          for (let i = 0; i < 5; i++) {
-            for (let j = 0; j < 5; j++) {
-              sample.push(FIFTY_DILEMMAS[i * 10 + j]);
-            }
-          }
-          return sample;
-        }
-        return FIFTY_DILEMMAS;
-      }, [courseCount]);
+      // 실시간 동적 질문 세션 상태 (페르소나별 맞춤 및 15/30/50개 세션)
+      const [soloQuestions, setSoloQuestions] = useState([]);
+      const [familyQuestions, setFamilyQuestions] = useState([]);
 
       // 솔로 모드 상태
       const [soloMember, setSoloMember] = useState(FAMILY_MEMBERS[0]);
@@ -137,6 +121,35 @@
       const [familyHistory, setFamilyHistory] = useState([]);
       const [familyFinished, setFamilyFinished] = useState(false);
       const [showPassModal, setShowPassModal] = useState(false);
+
+      // 세션 초기화 함수
+      const initSoloSession = (member, count = courseCount) => {
+        setSoloMember(member);
+        setSoloStep(0);
+        setSoloScores({});
+        setSoloHistory([]);
+        setSoloFinished(false);
+        setViewingRecord(null);
+        const dynamicList = generateDynamicQuestions(member.id, count);
+        setSoloQuestions(dynamicList);
+      };
+
+      const initFamilySession = (count = courseCount) => {
+        setFamilyRound(0);
+        setFamilyTurn(0);
+        setFamilyScores({ father: {}, mother: {}, son: {}, daughter: {} });
+        setFamilyHistory([]);
+        setFamilyFinished(false);
+        setViewingRecord(null);
+        const dynamicList = generateDynamicQuestions('father', count);
+        setFamilyQuestions(dynamicList);
+      };
+
+      // 컴포넌트 마운트 시 초기 세션 생성
+      useEffect(() => {
+        initSoloSession(FAMILY_MEMBERS[0], 30);
+        initFamilySession(30);
+      }, []);
 
       // 오늘의 가치 질문 한 입
       const [dailyBiteIndex, setDailyBiteIndex] = useState(0);
@@ -160,7 +173,8 @@
         setSoloScores(nextScores);
         setSoloHistory([...soloHistory, { step: soloStep, valueKey }]);
 
-        if (soloStep + 1 < activeQuestions.length) {
+        const qList = soloQuestions.length > 0 ? soloQuestions : DAD_DILEMMAS;
+        if (soloStep + 1 < qList.length) {
           setSoloStep(soloStep + 1);
         } else {
           // 저장
@@ -217,7 +231,8 @@
           setFamilyTurn(familyTurn + 1);
           setShowPassModal(true);
         } else {
-          if (familyRound + 1 < activeQuestions.length) {
+          const qList = familyQuestions.length > 0 ? familyQuestions : DAD_DILEMMAS;
+          if (familyRound + 1 < qList.length) {
             setFamilyRound(familyRound + 1);
             setFamilyTurn(0);
             setShowPassModal(true);
@@ -378,19 +393,23 @@
                   <div className="text-xs font-black text-gray-500 mb-2">질문 코스 선택</div>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { count: 10, label: '10문항', desc: '5분 숏코스' },
-                      { count: 25, label: '25문항', desc: '15분 심층' },
-                      { count: 50, label: '50문항', desc: '완전 마스터' }
+                      { count: 15, label: '15문항', desc: '5분 스피드' },
+                      { count: 30, label: '30문항', desc: '10분 밸런스(추천)' },
+                      { count: 50, label: '50문항', desc: '20분 완전심층' }
                     ].map(c => (
                       <button
                         key={c.count}
-                        onClick={() => setCourseCount(c.count)}
-                        className={`py-2 px-2 rounded-xl text-center border-2 transition-all ${
-                          courseCount === c.count ? 'border-amber-500 bg-amber-50 text-amber-900 font-black' : 'border-gray-200 text-gray-500 font-bold'
+                        onClick={() => {
+                          setCourseCount(c.count);
+                          initSoloSession(soloMember, c.count);
+                          initFamilySession(c.count);
+                        }}
+                        className={`py-2 px-1.5 rounded-xl text-center border-2 transition-all ${
+                          courseCount === c.count ? 'border-amber-500 bg-amber-50 text-amber-900 font-black ring-1 ring-amber-400' : 'border-gray-200 text-gray-500 font-bold'
                         }`}
                       >
-                        <div className="text-sm">{c.label}</div>
-                        <div className="text-[10px] opacity-75">{c.desc}</div>
+                        <div className="text-sm font-black">{c.label}</div>
+                        <div className="text-[9px] opacity-75">{c.desc}</div>
                       </button>
                     ))}
                   </div>
@@ -415,7 +434,7 @@
                 {/* 모드 실행 버튼 2개 */}
                 <div className="space-y-3 pt-1">
                   <button
-                    onClick={() => { setCurrentTab('solo'); setSoloFinished(false); setSoloStep(0); setSoloScores({}); setSoloHistory([]); setViewingRecord(null); }}
+                    onClick={() => { initSoloSession(soloMember, courseCount); setCurrentTab('solo'); }}
                     className="w-full text-left p-4 bg-white border-2 border-amber-300 active:border-amber-500 rounded-2xl shadow-2xs flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
@@ -424,15 +443,15 @@
                       </div>
                       <div>
                         <span className="text-[11px] font-black text-amber-700">모드 1. 혼자 깊이 생각하기</span>
-                        <div className="text-lg font-black text-gray-900">솔로 심층 모드 ({courseCount}문항)</div>
-                        <div className="text-[11px] text-gray-500 mt-0.5">4지선다형 · 자동 저장 지원</div>
+                        <div className="text-lg font-black text-gray-900">솔로 맞춤 모드 ({courseCount}문항)</div>
+                        <div className="text-[11px] text-gray-500 mt-0.5">나이·생활환경 맞춤 실시간 질문 생성</div>
                       </div>
                     </div>
                     <span className="text-lg text-amber-500 font-bold">➜</span>
                   </button>
 
                   <button
-                    onClick={() => { setCurrentTab('family'); setFamilyFinished(false); setFamilyRound(0); setFamilyTurn(0); setFamilyScores({ father: {}, mother: {}, son: {}, daughter: {} }); setFamilyHistory([]); setViewingRecord(null); }}
+                    onClick={() => { initFamilySession(courseCount); setCurrentTab('family'); }}
                     className="w-full text-left p-4 bg-white border-2 border-indigo-300 active:border-indigo-500 rounded-2xl shadow-2xs flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
@@ -461,7 +480,7 @@
                       {FAMILY_MEMBERS.map(m => (
                         <button
                           key={m.id}
-                          onClick={() => { setSoloMember(m); setSoloStep(0); setSoloScores({}); setSoloHistory([]); }}
+                          onClick={() => { initSoloSession(m, courseCount); }}
                           className={`px-3 py-1.5 rounded-full text-xs font-black flex items-center gap-1 shrink-0 ${
                             soloMember.id === m.id ? 'bg-amber-500 text-white shadow-2xs' : 'bg-white border border-gray-200 text-gray-600'
                           }`}
@@ -475,7 +494,7 @@
                     {/* 진행률 바 & 되돌아가기 */}
                     <div className="flex items-center justify-between text-xs font-bold text-gray-400">
                       <div className="flex items-center gap-2">
-                        <span>{soloMember.name}의 가치관</span>
+                        <span className="text-gray-800 font-black">{soloMember.name} ({soloMember.age}세) 맞춤형</span>
                         {soloStep > 0 && (
                           <button
                             onClick={handleSoloPrev}
@@ -485,58 +504,65 @@
                           </button>
                         )}
                       </div>
-                      <span className="text-amber-600 font-black">{soloStep + 1} / {activeQuestions.length}</span>
+                      <span className="text-amber-600 font-black">{soloStep + 1} / {(soloQuestions && soloQuestions.length > 0) ? soloQuestions.length : courseCount}</span>
                     </div>
                     <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-amber-500 transition-all duration-300"
-                        style={{ width: `${((soloStep + 1) / activeQuestions.length) * 100}%` }}
+                        style={{ width: `${((soloStep + 1) / ((soloQuestions && soloQuestions.length > 0) ? soloQuestions.length : courseCount)) * 100}%` }}
                       ></div>
                     </div>
 
                     {/* 1문항 4지선다형 질문 카드 */}
-                    <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-2xs">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-black text-amber-600 uppercase">
-                          Q{soloStep + 1}. {activeQuestions[soloStep].title}
-                        </span>
-                        {soloStep > 0 && (
-                          <button
-                            onClick={handleSoloPrev}
-                            className="text-[11px] text-gray-400 active:text-amber-700 font-bold"
-                          >
-                            ↺ 이전 질문
-                          </button>
-                        )}
-                      </div>
-
-                      <h3 className="text-base font-black text-gray-900 mt-1 mb-4 leading-snug">
-                        {activeQuestions[soloStep].question}
-                      </h3>
-
-                      {/* 4개 보기 버튼 */}
-                      <div className="space-y-2.5">
-                        {activeQuestions[soloStep].options.map((opt, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleSoloChoice(opt.valueKey)}
-                            className="w-full text-left p-3.5 bg-amber-50/40 active:bg-amber-100/80 border-2 border-amber-200 active:border-amber-400 rounded-2xl flex items-start gap-2.5 transition-all"
-                          >
-                            <span className="w-6 h-6 rounded-lg bg-amber-500 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
-                              {optionLabels[idx]}
+                    {(() => {
+                      const qList = (soloQuestions && soloQuestions.length > 0) ? soloQuestions : DAD_DILEMMAS;
+                      const currentQ = qList[soloStep] || qList[0];
+                      const optionLabels = ['A', 'B', 'C', 'D'];
+                      return (
+                        <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-2xs">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-black text-amber-600 uppercase">
+                              Q{soloStep + 1}. {currentQ.title}
                             </span>
-                            <div className="flex-1">
-                              <div className="text-sm font-black text-gray-900 leading-tight mb-0.5">
-                                {opt.text}
-                              </div>
-                              <div className="text-[10px] text-amber-800/80 font-bold">
-                                💡 {opt.desc}
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                            {soloStep > 0 && (
+                              <button
+                                onClick={handleSoloPrev}
+                                className="text-[11px] text-gray-400 active:text-amber-700 font-bold"
+                              >
+                                ↺ 이전 질문
+                              </button>
+                            )}
+                          </div>
+
+                          <h3 className="text-base font-black text-gray-900 mt-1 mb-4 leading-snug">
+                            {currentQ.question}
+                          </h3>
+
+                          {/* 4개 보기 버튼 */}
+                          <div className="space-y-2.5">
+                            {currentQ.options.map((opt, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => handleSoloChoice(opt.valueKey)}
+                                className="w-full text-left p-3.5 bg-amber-50/40 active:bg-amber-100/80 border-2 border-amber-200 active:border-amber-400 rounded-2xl flex items-start gap-2.5 transition-all"
+                              >
+                                <span className="w-6 h-6 rounded-lg bg-amber-500 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                  {optionLabels[idx]}
+                                </span>
+                                <div className="flex-1">
+                                  <div className="text-sm font-black text-gray-900 leading-tight mb-0.5">
+                                    {opt.text}
+                                  </div>
+                                  <div className="text-[10px] text-amber-800/80 font-bold">
+                                    💡 {opt.desc}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ) : (
                   /* 솔로 완료 (상세 평가 + 6대 영역 5개 이상 추천) */
@@ -736,52 +762,59 @@
                     </div>
 
                     {/* 라운드 딜레마 카드 */}
-                    <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-2xs">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-black text-indigo-600">
-                          {activeQuestions[familyRound].title}
-                        </span>
-                        {familyHistory.length > 0 && (
-                          <button
-                            onClick={handleFamilyPrev}
-                            className="text-[11px] text-gray-400 font-bold"
-                          >
-                            ↺ 이전 턴
-                          </button>
-                        )}
-                      </div>
-
-                      <h3 className="text-base font-black text-gray-900 mt-1 mb-2 leading-snug">
-                        {activeQuestions[familyRound].question}
-                      </h3>
-                      
-                      <div className="p-3 bg-indigo-50 rounded-xl text-xs font-bold text-indigo-900 mb-4 leading-relaxed">
-                        {activeQuestions[familyRound].familyTopic}
-                      </div>
-
-                      {/* 4지선다형 버튼 4개 */}
-                      <div className="space-y-2.5">
-                        {activeQuestions[familyRound].options.map((opt, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleFamilyChoice(opt.valueKey)}
-                            className="w-full text-left p-3.5 bg-indigo-50/50 active:bg-indigo-100 border-2 border-indigo-200 rounded-2xl flex items-start gap-2.5 transition-all"
-                          >
-                            <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
-                              {optionLabels[idx]}
+                    {(() => {
+                      const qList = (familyQuestions && familyQuestions.length > 0) ? familyQuestions : DAD_DILEMMAS;
+                      const currentQ = qList[familyRound] || qList[0];
+                      const optionLabels = ['A', 'B', 'C', 'D'];
+                      return (
+                        <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-2xs">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-black text-indigo-600">
+                              Q{familyRound + 1}. {currentQ.title}
                             </span>
-                            <div className="flex-1">
-                              <div className="text-xs font-black text-gray-900 leading-tight mb-0.5">
-                                {opt.text}
-                              </div>
-                              <div className="text-[10px] text-indigo-700 font-bold">
-                                💡 {opt.desc}
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                            {familyHistory.length > 0 && (
+                              <button
+                                onClick={handleFamilyPrev}
+                                className="text-[11px] text-gray-400 font-bold"
+                              >
+                                ↺ 이전 턴
+                              </button>
+                            )}
+                          </div>
+
+                          <h3 className="text-base font-black text-gray-900 mt-1 mb-2 leading-snug">
+                            {currentQ.question}
+                          </h3>
+                          
+                          <div className="p-3 bg-indigo-50 rounded-xl text-xs font-bold text-indigo-900 mb-4 leading-relaxed">
+                            {currentQ.familyTopic}
+                          </div>
+
+                          {/* 4지선다형 버튼 4개 */}
+                          <div className="space-y-2.5">
+                            {currentQ.options.map((opt, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => handleFamilyChoice(opt.valueKey)}
+                                className="w-full text-left p-3.5 bg-indigo-50/50 active:bg-indigo-100 border-2 border-indigo-200 rounded-2xl flex items-start gap-2.5 transition-all"
+                              >
+                                <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                  {optionLabels[idx]}
+                                </span>
+                                <div className="flex-1">
+                                  <div className="text-xs font-black text-gray-900 leading-tight mb-0.5">
+                                    {opt.text}
+                                  </div>
+                                  <div className="text-[10px] text-indigo-700 font-bold">
+                                    💡 {opt.desc}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ) : (
                   /* 패밀리 완료 화면 */

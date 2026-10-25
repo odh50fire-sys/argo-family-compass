@@ -64,7 +64,7 @@
 
     function App() {
       const [view, setView] = useState('home');
-      const [selectedCourseCount, setSelectedCourseCount] = useState(50);
+      const [selectedCourseCount, setSelectedCourseCount] = useState(30);
 
       // 로컬 스토리지에 저장된 평가 이력 목록
       const [savedHistory, setSavedHistory] = useState([]);
@@ -83,26 +83,9 @@
         }
       }, []);
 
-      // 활성화된 질문 목록 (10, 25, 50)
-      const activeQuestions = useMemo(() => {
-        if (selectedCourseCount === 10) {
-          const sample = [];
-          for (let i = 0; i < 5; i++) {
-            sample.push(FIFTY_DILEMMAS[i * 10]);
-            sample.push(FIFTY_DILEMMAS[i * 10 + 4]);
-          }
-          return sample;
-        } else if (selectedCourseCount === 25) {
-          const sample = [];
-          for (let i = 0; i < 5; i++) {
-            for (let j = 0; j < 5; j++) {
-              sample.push(FIFTY_DILEMMAS[i * 10 + j]);
-            }
-          }
-          return sample;
-        }
-        return FIFTY_DILEMMAS;
-      }, [selectedCourseCount]);
+      // 실시간 동적 질문 세션 상태 (아빠/엄마/아들/딸 맞춤형 및 15/30/50개 세션)
+      const [soloQuestions, setSoloQuestions] = useState([]);
+      const [familyQuestions, setFamilyQuestions] = useState([]);
 
       // 솔로 모드 상태
       const [soloMember, setSoloMember] = useState(FAMILY_MEMBERS[0]);
@@ -144,13 +127,16 @@
         localStorage.setItem('argo_family_history', JSON.stringify(updated));
       };
 
-      // 솔로 모드 시작
+      // 솔로 모드 시작 (실시간 맞춤형 동적 질문 생성)
       const startSoloMode = (member) => {
         setSoloMember(member);
         setSoloStep(0);
         setSoloScores({});
         setSoloHistory([]);
         setViewingRecord(null);
+        // 페르소나별 실시간 동적 질문 생성 (중복 방지 및 10대 가치관 균형 샘플링)
+        const dynamicList = generateDynamicQuestions(member.id, selectedCourseCount);
+        setSoloQuestions(dynamicList);
         setView('solo_play');
       };
 
@@ -160,7 +146,8 @@
         setSoloScores(nextScores);
         setSoloHistory([...soloHistory, { step: soloStep, valueKey }]);
 
-        if (soloStep + 1 < activeQuestions.length) {
+        const totalQuestions = soloQuestions.length > 0 ? soloQuestions.length : selectedCourseCount;
+        if (soloStep + 1 < totalQuestions) {
           setSoloStep(soloStep + 1);
         } else {
           // 완료! 결과 저장
@@ -199,7 +186,7 @@
         setSoloStep(soloStep - 1);
       };
 
-      // 패밀리 릴레이 시작
+      // 패밀리 릴레이 시작 (실시간 동적 질문 생성)
       const startFamilyMode = () => {
         setFamilyRound(0);
         setFamilyTurn(0);
@@ -207,12 +194,16 @@
         setFamilyScores({ father: {}, mother: {}, son: {}, daughter: {} });
         setFamilyHistory([]);
         setViewingRecord(null);
+        // 패밀리 세션용 실시간 동적 질문 생성
+        const dynamicList = generateDynamicQuestions('father', selectedCourseCount);
+        setFamilyQuestions(dynamicList);
         setView('family_play');
       };
 
       // 패밀리 4지선다 답변 선택
       const handleFamilyChoice = (valueKey) => {
-        const currentQ = activeQuestions[familyRound];
+        const questionsList = familyQuestions.length > 0 ? familyQuestions : DAD_DILEMMAS;
+        const currentQ = questionsList[familyRound];
         const currentM = FAMILY_MEMBERS[familyTurn];
 
         const roundData = familyAnswers[currentQ.id] || {};
@@ -239,7 +230,7 @@
         if (familyTurn + 1 < FAMILY_MEMBERS.length) {
           setFamilyTurn(familyTurn + 1);
         } else {
-          if (familyRound + 1 < activeQuestions.length) {
+          if (familyRound + 1 < questionsList.length) {
             setFamilyRound(familyRound + 1);
             setFamilyTurn(0);
           } else {
@@ -414,25 +405,28 @@
               </div>
               <div className="grid md:grid-cols-3 gap-4">
                 <button
-                  onClick={() => setSelectedCourseCount(10)}
+                  onClick={() => setSelectedCourseCount(15)}
                   className={`p-5 rounded-2xl border-2 text-left transition-all ${
-                    selectedCourseCount === 10 ? 'border-amber-500 bg-amber-50/80 shadow-md ring-2 ring-amber-400' : 'border-gray-200 hover:border-amber-300 bg-white'
+                    selectedCourseCount === 15 ? 'border-amber-500 bg-amber-50/80 shadow-md ring-2 ring-amber-400' : 'border-gray-200 hover:border-amber-300 bg-white'
                   }`}
                 >
-                  <div className="text-2xl mb-1">⚡</div>
-                  <div className="font-extrabold text-lg text-gray-900">빠른 숏코스 (10문항)</div>
-                  <p className="text-xs text-gray-500 mt-1">약 5분 소요 · 핵심 가치를 빠르게 스캔하고 싶을 때</p>
+                  <div className="text-2xl mb-1">🚀</div>
+                  <div className="font-extrabold text-lg text-gray-900">스피드 나침반 (15문항)</div>
+                  <p className="text-xs text-gray-500 mt-1">약 5분 소요 · 아이들과 평일 가벼운 대화 / 핵심 가치 쾌속 스캔</p>
                 </button>
 
                 <button
-                  onClick={() => setSelectedCourseCount(25)}
+                  onClick={() => setSelectedCourseCount(30)}
                   className={`p-5 rounded-2xl border-2 text-left transition-all ${
-                    selectedCourseCount === 25 ? 'border-amber-500 bg-amber-50/80 shadow-md ring-2 ring-amber-400' : 'border-gray-200 hover:border-amber-300 bg-white'
+                    selectedCourseCount === 30 ? 'border-amber-500 bg-amber-50/80 shadow-md ring-2 ring-amber-400' : 'border-gray-200 hover:border-amber-300 bg-white'
                   }`}
                 >
-                  <div className="text-2xl mb-1">🎯</div>
-                  <div className="font-extrabold text-lg text-gray-900">심층 코스 (25문항)</div>
-                  <p className="text-xs text-gray-500 mt-1">약 15분 소요 · 테마별 균형 잡힌 정밀한 가치 분석</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-2xl">⚖️</span>
+                    <span className="px-2 py-0.5 bg-amber-200 text-amber-900 text-[11px] font-black rounded-md">추천 기본</span>
+                  </div>
+                  <div className="font-extrabold text-lg text-gray-900">밸런스 나침반 (30문항)</div>
+                  <p className="text-xs text-gray-500 mt-1">약 10~12분 소요 · 주말 가족 서클 / 정밀도와 집중력의 최적 균형</p>
                 </button>
 
                 <button
@@ -441,9 +435,9 @@
                     selectedCourseCount === 50 ? 'border-amber-500 bg-amber-50/80 shadow-md ring-2 ring-amber-400' : 'border-gray-200 hover:border-amber-300 bg-white'
                   }`}
                 >
-                  <div className="text-2xl mb-1">🏆</div>
-                  <div className="font-extrabold text-lg text-gray-900">마스터 항해 (50문항 전체)</div>
-                  <p className="text-xs text-gray-500 mt-1">약 25분 소요 · 5대 테마를 완전히 완주하는 진정한 생애 성찰</p>
+                  <div className="text-2xl mb-1">🧭</div>
+                  <div className="font-extrabold text-lg text-gray-900">완전 심층 나침반 (50문항)</div>
+                  <p className="text-xs text-gray-500 mt-1">약 20분 소요 · 5대 테마 전 영역의 정밀 가치 스펙트럼 마스터</p>
                 </button>
               </div>
             </div>
@@ -557,7 +551,8 @@
       // VIEW 3: SOLO PLAY (4지선다형 진행)
       // ==========================================
       if (view === 'solo_play') {
-        const currentQ = activeQuestions[soloStep];
+        const questionsList = (soloQuestions && soloQuestions.length > 0) ? soloQuestions : DAD_DILEMMAS;
+        const currentQ = questionsList[soloStep] || questionsList[0];
         const currentTheme = THEMES.find(t => t.id === currentQ.themeId);
         const optionLabels = ['A', 'B', 'C', 'D'];
 
@@ -568,16 +563,19 @@
               <div className="flex items-center gap-3">
                 <span className="text-4xl">{soloMember.avatar}</span>
                 <div>
-                  <div className="font-black text-xl text-gray-900">{soloMember.name}의 가치관 탐험</div>
-                  <div className="text-xs font-bold text-amber-700">{currentTheme?.name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-xl text-gray-900">{soloMember.name}의 가치관 탐험</span>
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-900 text-xs font-black rounded-full">{soloMember.name} ({soloMember.age}세) 맞춤형</span>
+                  </div>
+                  <div className="text-xs font-bold text-amber-700 mt-0.5">{currentTheme?.name} · 실시간 무중복 질문 세션</div>
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-sm font-black text-amber-600">{soloStep + 1} / {activeQuestions.length}</span>
+                <span className="text-sm font-black text-amber-600">{soloStep + 1} / {questionsList.length}</span>
                 <div className="w-36 h-3 bg-gray-200 rounded-full mt-1.5 overflow-hidden">
                   <div 
                     className="h-full bg-amber-500 transition-all duration-300"
-                    style={{ width: `${((soloStep + 1) / activeQuestions.length) * 100}%` }}
+                    style={{ width: `${((soloStep + 1) / questionsList.length) * 100}%` }}
                   ></div>
                 </div>
               </div>
@@ -864,7 +862,8 @@
       // VIEW 5: FAMILY PLAY (패밀리 4지선다형)
       // ==========================================
       if (view === 'family_play') {
-        const currentQ = activeQuestions[familyRound];
+        const questionsList = (familyQuestions && familyQuestions.length > 0) ? familyQuestions : DAD_DILEMMAS;
+        const currentQ = questionsList[familyRound] || questionsList[0];
         const currentM = FAMILY_MEMBERS[familyTurn];
         const currentTheme = THEMES.find(t => t.id === currentQ.themeId);
         const currentRoundAnswers = familyAnswers[currentQ.id] || {};
@@ -878,7 +877,7 @@
                 <div className="text-6xl animate-bounce">{currentM.avatar}</div>
                 <div>
                   <div className="inline-block px-3 py-1 bg-indigo-700 text-indigo-200 rounded-full text-xs font-bold mb-1">
-                    질문 {familyRound + 1} / {activeQuestions.length} · {currentTheme?.name}
+                    질문 {familyRound + 1} / {questionsList.length} · {currentTheme?.name}
                   </div>
                   <h2 className="text-3xl md:text-4xl font-black">
                     지금은 <span className="text-amber-400">[{currentM.name}]</span>의 차례입니다!
